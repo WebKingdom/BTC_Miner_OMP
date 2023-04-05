@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 
 using namespace std;
@@ -26,9 +25,10 @@ class Blockchain {
     bool isEmpty() { return (head == NULL); }
     void appendBlock(string prev_digest, string data, size_t threshold, size_t nonce);
     void removeBlock();
-    bool thresholdMet(string &digest, size_t threshold);
-    string getString();
+    bool thresholdMet(string &digest, size_t &threshold);
+    string getString(size_t &cur_nonce);
     size_t getCurrentBlockId() { return current->block_id; }
+    string getPrevDigest() { return current->prev_digest; }
     size_t getSize() { return num_blocks; }
 };
 
@@ -102,7 +102,12 @@ void Blockchain::removeBlock() {
  * @return true
  * @return false
  */
-bool Blockchain::thresholdMet(string &digest, size_t threshold) {
+bool Blockchain::thresholdMet(string &digest, size_t &threshold) {
+    if (threshold >= digest.length()) {
+        // Cannot have more leading zeros than the length of the digest.
+        return false;
+    }
+
     for (size_t i = 0; i < threshold; i++) {
         if (digest[i] != '0') {
             return false;
@@ -110,7 +115,7 @@ bool Blockchain::thresholdMet(string &digest, size_t threshold) {
     }
 
     // If the current digest has more than the threshold number of leading zeros, then it is not a valid digest.
-    if (digest[current->block_id] == '0') {
+    if (digest[threshold] == '0') {
         return false;
     }
 
@@ -122,6 +127,6 @@ bool Blockchain::thresholdMet(string &digest, size_t threshold) {
  *
  * @return string
  */
-string Blockchain::getString() {
-    return "[" + to_string(current->block_id) + "|" + current->prev_digest + "|" + current->data + "|" + to_string(current->threshold) + "|" + to_string(current->nonce) + "]";
+string Blockchain::getString(size_t &cur_nonce) {
+    return "[" + to_string(current->block_id) + "|" + current->prev_digest + "|" + current->data + "|" + to_string(current->threshold) + "|" + to_string(cur_nonce) + "]";
 }

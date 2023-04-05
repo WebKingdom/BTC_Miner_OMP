@@ -1,0 +1,32 @@
+BLOCK ID: 0             Size: 1
+Hash Initialization:    0000000000000000000000000000000000000000000000000000000000000000        Nonce: 0
+Digest:                 00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca        Nonce: 409
+Data:                   [0|0000000000000000000000000000000000000000000000000000000000000000|This is the initial data in the 1st block|1|409]
+Block runtime:          0.000799829 seconds     Total runtime: 0.000799829 seconds
+
+BLOCK ID: 1             Size: 2
+Hash Initialization:    00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca        Nonce: 0
+Digest:                 0007b1db75e8fcf641af1c7b66601be920fd5f0bdf22da322d2b47309203b171        Nonce: 4261
+Data:                   [1|00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca|[0|0000000000000000000000000000000000000000000000000000000000000000|This is the initial data in the 1st block|1|409]|2|4261]
+Block runtime:          0.00845907 seconds      Total runtime: 0.00929778 seconds
+
+BLOCK ID: 2             Size: 3
+Hash Initialization:    0007b1db75e8fcf641af1c7b66601be920fd5f0bdf22da322d2b47309203b171        Nonce: 0
+Digest:                 0000a0e4d283bf515fbc6a6720c41aadc241b1e9938d60218ef1d460cf0bc02b        Nonce: 1844
+Data:                   [2|0007b1db75e8fcf641af1c7b66601be920fd5f0bdf22da322d2b47309203b171|[1|00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca|[0|0000000000000000000000000000000000000000000000000000000000000000|This is the initial data in the 1st block|1|409]|2|4261]|3|1844]
+Block runtime:          0.00362607 seconds      Total runtime: 0.0129561 seconds
+
+BLOCK ID: 3             Size: 4
+Hash Initialization:    0000a0e4d283bf515fbc6a6720c41aadc241b1e9938d60218ef1d460cf0bc02b        Nonce: 0
+Digest:                 00000e2173423c5061a825ee1ae95fa548413ab5eddf5610d7508b23b6a8efbe        Nonce: 1123707
+Data:                   [3|0000a0e4d283bf515fbc6a6720c41aadc241b1e9938d60218ef1d460cf0bc02b|[2|0007b1db75e8fcf641af1c7b66601be920fd5f0bdf22da322d2b47309203b171|[1|00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca|[0|0000000000000000000000000000000000000000000000000000000000000000|This is the initial data in the 1st block|1|409]|2|4261]|3|1844]|4|1123707]
+Block runtime:          2.27961 seconds Total runtime: 2.29259 seconds
+
+BLOCK ID: 4             Size: 5
+Hash Initialization:    00000e2173423c5061a825ee1ae95fa548413ab5eddf5610d7508b23b6a8efbe        Nonce: 0
+Digest:                 000000d84513538c8d08083bb045125be7e3743bb4368fadf29114802adb8e27        Nonce: 13650480
+Data:                   [4|00000e2173423c5061a825ee1ae95fa548413ab5eddf5610d7508b23b6a8efbe|[3|0000a0e4d283bf515fbc6a6720c41aadc241b1e9938d60218ef1d460cf0bc02b|[2|0007b1db75e8fcf641af1c7b66601be920fd5f0bdf22da322d2b47309203b171|[1|00c3cd91dd85ef78a75f5366cd4e5ab76227cf57ea1cbfbaf03453f4a99d59ca|[0|0000000000000000000000000000000000000000000000000000000000000000|This is the initial data in the 1st block|1|409]|2|4261]|3|1844]|4|1123707]|5|13650480]
+Block runtime:          28.1937 seconds Total runtime: 30.4863 seconds
+
+BLOCK ID: 5             Size: 6
+Hash Initialization:    000000d84513538c8d08083bb045125be7e3743bb4368fadf29114802adb8e27        Nonce: 0

@@ -23,6 +23,38 @@ void exit_handler(int signal) {
     running = false;
 }
 
+/**
+ * @brief Prints the current (to be mined) block info to the console
+ *
+ * @param blockchain
+ * @param nonce
+ */
+void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
+    cout << "\nBLOCK ID: " << blockchain.getCurrentBlockId() << "\t\tSize: " << blockchain.getSize() << endl;
+    cout << "Hash Initialization: \t" << blockchain.getPrevDigest() << "\tNonce: " << to_string(nonce) << endl;
+}
+
+/**
+ * @brief Prints the newly found block info to the console
+ *
+ * @param t_start
+ * @param t_start_global
+ * @param digest
+ * @param nonce
+ * @param data_to_hash
+ */
+void print_new_block_info(auto &t_start, auto &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
+    // Record time
+    auto t_end = chrono::high_resolution_clock::now();
+    auto t_elapsed = chrono::duration<double>(t_end - t_start);
+    auto t_global_elapsed = chrono::duration<double>(t_end - t_start_global);
+    // Print the block info
+    cout << "Digest: \t\t" << digest << "\tNonce: " << to_string(nonce) << endl;
+    cout << "Data: \t\t\t" << data_to_hash << endl;
+    cout << "Block runtime: \t\t" << t_elapsed.count() << " seconds"
+         << "\tTotal runtime: " << t_global_elapsed.count() << " seconds" << endl;
+}
+
 int main(int argc, char *argv[]) {
     // Create interrupt handling variables. Exit on a keyboard ctrl-c interrupt
     struct sigaction sigIntHandler;
@@ -44,11 +76,11 @@ int main(int argc, char *argv[]) {
     blockchain.appendBlock(init_prev_digest, init_data, global_threshold, global_nonce);
     global_threshold++;
 
-    cout << "\nBLOCK ID: " << blockchain.getCurrentBlockId() << "\t\tSize: " << blockchain.getSize() << endl;
-    cout << "Hash Initialization: \t" << blockchain.getPrevDigest() << "\tNonce: " << global_nonce << endl;
+    print_current_block_info(blockchain, global_nonce);
 
+    // Start the timer
     auto t_start = chrono::high_resolution_clock::now();
-    auto t_global_start = t_start;
+    auto t_start_global = t_start;
 
     while (running) {
         const string data_to_hash = blockchain.getString(global_nonce);
@@ -59,13 +91,9 @@ int main(int argc, char *argv[]) {
             valid_nonce = global_nonce;
             validation_counter++;
             if (validation_counter >= NUM_VALIDATIONS) {
-                auto t_end = chrono::high_resolution_clock::now();
-                auto t_elapsed = chrono::duration<double>(t_end - t_start);
-                auto t_global_elapsed = chrono::duration<double>(t_end - t_global_start);
-                cout << "Digest: \t\t" << digest << "\tNonce: " << valid_nonce << endl;
-                cout << "Data: \t\t\t" << data_to_hash << endl;
-                cout << "Block runtime: \t\t" << t_elapsed.count() << " seconds"
-                     << "\tTotal runtime: " << t_global_elapsed.count() << " seconds" << endl;
+                // Record time
+                print_new_block_info(t_start, t_start_global, digest, valid_nonce, data_to_hash);
+                // Append the block to the blockchain
                 blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
                 // Reset nonce and validation counter. Increment threshold
                 global_nonce = 0;
@@ -74,9 +102,7 @@ int main(int argc, char *argv[]) {
                     global_threshold++;
                 }
 
-                // Print the upcoming block info
-                cout << "\nBLOCK ID: " << blockchain.getCurrentBlockId() << "\t\tSize: " << blockchain.getSize() << endl;
-                cout << "Hash Initialization: \t" << blockchain.getPrevDigest() << "\tNonce: " << global_nonce << endl;
+                print_current_block_info(blockchain, global_nonce);
 
                 // Reset the timer
                 t_start = chrono::high_resolution_clock::now();
@@ -86,6 +112,9 @@ int main(int argc, char *argv[]) {
             global_nonce++;
         }
     }
+
+    // Delete the blockchain and free memory
+    blockchain.~Blockchain();
 
     return 0;
 }

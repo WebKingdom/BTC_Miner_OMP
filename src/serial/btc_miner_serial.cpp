@@ -1,15 +1,10 @@
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include <chrono>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <string>
 
-#include "Blockchain.cpp"
-#include "sha256.cpp"
+#include "../includes/Blockchain.cpp"
+#include "../includes/sha256.cpp"
 
 using namespace std;
 
@@ -69,7 +64,7 @@ int main(int argc, char *argv[]) {
 
     size_t global_threshold = 1;
     size_t global_nonce = 0;
-    size_t valid_nonce = global_nonce;
+    size_t valid_nonce = 0;
     size_t validation_counter = 0;
 
     Blockchain blockchain;

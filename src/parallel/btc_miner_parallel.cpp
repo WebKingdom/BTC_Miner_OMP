@@ -62,6 +62,12 @@ int main(int argc, char *argv[]) {
     const string INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
     const string INIT_DATA = "This is the initial data in the 1st block";
 
+    // Set the number of threads to use
+    const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
+    const size_t NUM_VALIDATIONS = MAX_NUM_THREADS / 2;
+    // omp_set_num_threads(MAX_NUM_THREADS);
+    cout << "Number of threads: " << MAX_NUM_THREADS << endl;
+
     size_t global_threshold = 1;
     size_t global_nonce = 0;
     size_t private_nonce = 0;
@@ -75,15 +81,11 @@ int main(int argc, char *argv[]) {
 
     print_current_block_info(blockchain, global_nonce);
 
-    // Set the number of threads to use
-    const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
-    const size_t NUM_VALIDATIONS = MAX_NUM_THREADS / 2;
-    // omp_set_num_threads(MAX_NUM_THREADS);
-    cout << "Number of threads: " << MAX_NUM_THREADS << endl;
-
     // Initialize lock for incrementing the nonce
-    omp_lock_t lock;
-    omp_init_lock(&lock);
+    omp_lock_t lock_nonce;
+    omp_lock_t lock_print;
+    omp_init_lock(&lock_nonce);
+    omp_init_lock(&lock_print);
 
     // Start the timer
     auto t_start = chrono::high_resolution_clock::now();
@@ -106,7 +108,9 @@ int main(int argc, char *argv[]) {
             string digest = double_sha256(data_to_hash);
 
             if (blockchain.thresholdMet(digest, global_threshold)) {
+                omp_set_lock(&lock_print);
                 cout << "Found valid nonce: " << private_nonce << "\tTID: " << omp_get_thread_num() << endl;
+                omp_unset_lock(&lock_print);
                 // Found a valid nonce that provides a digest that meets the threshold requirement.
                 // Only 1 thread should print the block info and update the blockchain. The other threads should verify the digest with the valid nonce.
 #pragma omp single nowait
@@ -114,13 +118,14 @@ int main(int argc, char *argv[]) {
                     valid_nonce = private_nonce;
                     validation_counter = 0;
                     verify = true;
-                    cout << "Waiting to verify in TID: " << omp_get_thread_num() << endl;
                     while (validation_counter < NUM_VALIDATIONS) {
                         // Wait for all threads to verify the digest
                     }
 
                     // Record time
+                    omp_set_lock(&lock_print);
                     print_new_block_info(t_start, t_start_global, digest, valid_nonce, data_to_hash);
+                    omp_unset_lock(&lock_print);
                     // Append the block to the blockchain
                     blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
                     // Reset nonce and validation counter. Increment threshold
@@ -130,7 +135,9 @@ int main(int argc, char *argv[]) {
                         global_threshold++;
                     }
 
+                    omp_set_lock(&lock_print);
                     print_current_block_info(blockchain, private_nonce);
+                    omp_unset_lock(&lock_print);
 
                     // Reset the timer
                     t_start = chrono::high_resolution_clock::now();
@@ -138,47 +145,50 @@ int main(int argc, char *argv[]) {
                 }
             } else {
                 // Invalid nonce. Increment and try again
-                omp_set_lock(&lock);
+                omp_set_lock(&lock_nonce);
                 private_nonce = global_nonce;
                 global_nonce++;
-                omp_unset_lock(&lock);
+                omp_unset_lock(&lock_nonce);
             }
 
             // The other threads should verify the digest with the valid nonce and increment the validation counter
             if (verify) {
                 data_to_hash = blockchain.getString(valid_nonce);
                 digest = double_sha256(data_to_hash);
-                cout << "Verifying digest: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
-
                 // Verify 1 thread at a time
 #pragma omp critical
                 {
                     if (validation_counter < NUM_VALIDATIONS) {
                         if (blockchain.thresholdMet(digest, global_threshold)) {
+                            omp_set_lock(&lock_print);
                             cout << "Digest accepted: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
+                            omp_unset_lock(&lock_print);
                             validation_counter++;
                         } else {
+                            omp_set_lock(&lock_print);
                             cout << "ERROR. Digest rejected: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
+                            omp_unset_lock(&lock_print);
                         }
                     }
                 }
-                cout << "Waiting for verification done in TID: " << omp_get_thread_num() << endl;
                 while (verify) {
                     // Wait for the single thread (that found the valid nonce & digest) to print the block info and update the blockchain
                 }
 
                 // New block added, set the nonce
-                omp_set_lock(&lock);
+                omp_set_lock(&lock_nonce);
+                cout << "Set private nonce: " << global_nonce << "\tTID: " << omp_get_thread_num() << endl;
                 private_nonce = global_nonce;
                 global_nonce++;
-                omp_unset_lock(&lock);
+                omp_unset_lock(&lock_nonce);
             }
         }
     }
 
     // Delete the blockchain and free memory
     blockchain.~Blockchain();
-    omp_destroy_lock(&lock);
+    omp_destroy_lock(&lock_nonce);
+    omp_destroy_lock(&lock_print);
 
     return 0;
 }

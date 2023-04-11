@@ -1,15 +1,14 @@
 #include <omp.h>
 #include <signal.h>
 #include <stdlib.h>
-
-// #include <chrono>
+#include <stdio.h>
 
 #include "../includes/Blockchain.cpp"
 #include "../includes/sha256.cpp"
 
 using namespace std;
 
-#define DEBUG 0
+#define DEBUG 1
 #define SHA256_BITS 256
 
 bool running = true;
@@ -39,19 +38,14 @@ void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
  * @param nonce
  * @param data_to_hash
  */
-void print_new_block_info(auto &t_start, auto &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
+void print_new_block_info(double &t_start, const double &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
     // Record time
-    // auto t_end = chrono::high_resolution_clock::now();
-    // auto t_elapsed = chrono::duration<double>(t_end - t_start);
-    // auto t_global_elapsed = chrono::duration<double>(t_end - t_start_global);
     double t_end = omp_get_wtime();
     double t_elapsed = t_end - t_start;
     double t_global_elapsed = t_end - t_start_global;
     // Print the block info
     cout << "Digest: \t\t" << digest << "\tNonce: " << to_string(nonce) << "\tTID: " << omp_get_thread_num() << endl;
     cout << "Data: \t\t\t" << data_to_hash << endl;
-    // cout << "Block runtime: \t\t" << t_elapsed.count() << " seconds"
-    //      << "\tTotal runtime: " << t_global_elapsed.count() << " seconds" << endl;
     cout << "Block runtime: \t\t" << t_elapsed << " seconds"
          << "\tTotal runtime: " << t_global_elapsed << " seconds" << endl;
 }
@@ -70,9 +64,11 @@ int main(int argc, char *argv[]) {
 
     // Set the number of threads to use
     const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
-    const size_t NUM_VALIDATIONS = MAX_NUM_THREADS / 2;
+    const size_t NUM_VALIDATIONS = 2;
+    const size_t NUM_DEVICES = omp_get_num_devices();
     // omp_set_num_threads(MAX_NUM_THREADS);
-    cout << "Number of threads: " << MAX_NUM_THREADS << endl;
+    cout << "Number of CPU threads: " << MAX_NUM_THREADS << endl;
+    cout << "Number of devices: " << NUM_DEVICES << endl;
 
     size_t global_threshold = 1;
     size_t global_nonce = 0;
@@ -94,18 +90,23 @@ int main(int argc, char *argv[]) {
     omp_init_lock(&lock_print);
 
     // Start the timer
-    // auto t_start = chrono::high_resolution_clock::now();
-    // auto t_start_global = t_start;
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
 
-#pragma omp parallel num_threads(MAX_NUM_THREADS) private(private_nonce)
+    // distribute and parallelize on GPU instead of CPU
+
+
+// #pragma omp target data map(alloc: blockchain, global_threshold, global_nonce, verify, validation_counter, )
+
+// valid_nonce may be tofrom
+#pragma omp target map(to: global_nonce, private_nonce, valid_nonce, blockchain, global_threshold, validation_counter, NUM_VALIDATIONS, verify) map(from: t_start) map(tofrom: running)
+// #pragma omp target teams distribute
     {
         // Assign a private nonce to each thread
 #pragma omp critical
         {
             if (DEBUG)
-                cout << "Set private nonce: " << global_nonce << "\tTID: " << omp_get_thread_num() << endl;
+                printf("Set private nonce: %lu\tTID: %d\n", global_nonce, omp_get_thread_num());
             private_nonce = global_nonce;
             global_nonce++;
         }
@@ -119,7 +120,7 @@ int main(int argc, char *argv[]) {
             if (blockchain.thresholdMet(digest, global_threshold)) {
                 if (DEBUG) {
                     omp_set_lock(&lock_print);
-                    cout << "Found valid nonce: " << private_nonce << "\tTID: " << omp_get_thread_num() << endl;
+                    printf("Found valid nonce: %lu\tTID: %d\n", private_nonce, omp_get_thread_num());
                     omp_unset_lock(&lock_print);
                 }
                 // Found a valid nonce that provides a digest that meets the threshold requirement.
@@ -151,7 +152,6 @@ int main(int argc, char *argv[]) {
                     omp_unset_lock(&lock_print);
 
                     // Reset the timer
-                    // t_start = chrono::high_resolution_clock::now();
                     t_start = omp_get_wtime();
                     verify = false;
                 }
@@ -173,12 +173,12 @@ int main(int argc, char *argv[]) {
                     if (validation_counter < NUM_VALIDATIONS) {
                         if (blockchain.thresholdMet(digest, global_threshold)) {
                             omp_set_lock(&lock_print);
-                            cout << "Digest accepted: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
+                            printf("Digest accepted: \t%s\tNonce: %lu\tTID: %d\n", digest.c_str(), valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                             validation_counter++;
                         } else {
                             omp_set_lock(&lock_print);
-                            cout << "ERROR. Digest rejected: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
+                            printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTID: %d\n", digest.c_str(), valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                         }
                     }
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
                 // New block added, set the nonce
                 omp_set_lock(&lock_nonce);
                 if (DEBUG)
-                    cout << "Set private nonce: " << global_nonce << "\tTID: " << omp_get_thread_num() << endl;
+                    printf("Set private nonce: %lu\tTID: %d\n", global_nonce, omp_get_thread_num());
                 private_nonce = global_nonce;
                 global_nonce++;
                 omp_unset_lock(&lock_nonce);

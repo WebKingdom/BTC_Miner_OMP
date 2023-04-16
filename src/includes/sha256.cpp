@@ -6,11 +6,16 @@
 #include <sstream>
 #include <string>
 
+#include "defs.h"
+
 using namespace std;
 
 #define SHA256_DIGEST_LENGTH 32
 
 // Function for taking the SHA-256 hash of a string
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 string sha256(const string str) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
@@ -24,8 +29,14 @@ string sha256(const string str) {
     }
     return ss.str();
 }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
 
 // Function for taking the double SHA-256 hash of a string
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 string double_sha256(const string str) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
@@ -43,3 +54,6 @@ string double_sha256(const string str) {
     }
     return ss.str();
 }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif

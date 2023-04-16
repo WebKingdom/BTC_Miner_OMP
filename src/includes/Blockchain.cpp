@@ -1,5 +1,6 @@
 // #pragma once
 #include <string>
+#include "defs.h"
 
 using namespace std;
 
@@ -62,6 +63,9 @@ Blockchain::~Blockchain() {
  * @param threshold
  * @param nonce
  */
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 void Blockchain::appendBlock(string prev_digest, string data, size_t threshold, size_t nonce) {
     Block *new_block = new Block();
     new_block->block_id = block_counter;
@@ -81,6 +85,9 @@ void Blockchain::appendBlock(string prev_digest, string data, size_t threshold, 
     num_blocks++;
     block_counter++;
 }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
 
 /**
  * @brief Removes a block from the front of the blockchain.
@@ -103,6 +110,9 @@ void Blockchain::removeBlock() {
  * @return true
  * @return false
  */
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 bool Blockchain::thresholdMet(string &digest, size_t &threshold) {
     if (threshold >= digest.length()) {
         // Cannot have more leading zeros than the length of the digest.
@@ -122,12 +132,21 @@ bool Blockchain::thresholdMet(string &digest, size_t &threshold) {
 
     return true;
 }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
 
 /**
  * @brief Returns the string representation of the current block.
  *
  * @return string
  */
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 string Blockchain::getString(size_t &cur_nonce) {
     return "[" + to_string(current->block_id) + "|" + current->prev_digest + "|" + current->data + "|" + to_string(current->threshold) + "|" + to_string(cur_nonce) + "]";
 }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif

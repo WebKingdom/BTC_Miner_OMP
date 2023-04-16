@@ -33,7 +33,7 @@ void test2() {
          *
          */
         printf("Created team = %5d / %5d, threads in team = %5d, max threads in team = %5d\n", omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads());
-#pragma omp parallel num_threads(2)
+#pragma omp parallel
         {
             size_t private_counter = 0;
             // Assign a private counter to each thread in each team

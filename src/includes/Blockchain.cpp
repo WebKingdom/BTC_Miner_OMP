@@ -1,5 +1,8 @@
 // #pragma once
+#include <string.h>
+
 #include <string>
+
 #include "defs.h"
 
 using namespace std;
@@ -27,8 +30,9 @@ class Blockchain {
     bool isEmpty() { return (head == NULL); }
     void appendBlock(string prev_digest, string data, size_t threshold, size_t nonce);
     void removeBlock();
-    bool thresholdMet(string &digest, size_t &threshold);
+    bool thresholdMet(const char* digest, size_t &threshold);
     string getString(size_t &cur_nonce);
+    char* gpu_getString(size_t &cur_nonce);
     size_t getCurrentBlockId() { return current->block_id; }
     string getPrevDigest() { return current->prev_digest; }
     size_t getSize() { return num_blocks; }
@@ -113,8 +117,8 @@ void Blockchain::removeBlock() {
 #if RUN_ON_TARGET
 #pragma omp declare target
 #endif
-bool Blockchain::thresholdMet(string &digest, size_t &threshold) {
-    if (threshold >= digest.length()) {
+bool Blockchain::thresholdMet(const char* digest, size_t &threshold) {
+    if (threshold >= strlen(digest)) {
         // Cannot have more leading zeros than the length of the digest.
         return false;
     }
@@ -141,11 +145,26 @@ bool Blockchain::thresholdMet(string &digest, size_t &threshold) {
  *
  * @return string
  */
+string Blockchain::getString(size_t &cur_nonce) {
+    return "[" + to_string(current->block_id) + "|" + current->prev_digest + "|" + current->data + "|" + to_string(current->threshold) + "|" + to_string(cur_nonce) + "]";
+}
+
+/**
+ * @brief Returns the string representation of the current block.
+ *
+ * @return string
+ */
 #if RUN_ON_TARGET
 #pragma omp declare target
 #endif
-string Blockchain::getString(size_t &cur_nonce) {
-    return "[" + to_string(current->block_id) + "|" + current->prev_digest + "|" + current->data + "|" + to_string(current->threshold) + "|" + to_string(cur_nonce) + "]";
+char* Blockchain::gpu_getString(size_t &cur_nonce) {
+    // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
+    // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
+    const unsigned short size_t_bytes = 40;
+    // Create string
+    char *str = (char *)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(current->prev_digest.c_str()) + 1 + strlen(current->data.c_str()) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest.c_str(), current->data.c_str(), current->threshold, cur_nonce);
+    return str;
 }
 #if RUN_ON_TARGET
 #pragma omp end declare target

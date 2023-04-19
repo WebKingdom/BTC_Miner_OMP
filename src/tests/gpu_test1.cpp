@@ -2,6 +2,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <string>
+
+#include "../includes/sha256.cpp"
 
 using namespace std;
 
@@ -84,6 +89,42 @@ void test4() {
     }
 }
 
+void test_strings() {
+    // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
+    // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
+    const unsigned short size_t_bytes = 40;
+    size_t block_id = 1;
+    string prev_digest = "0123456789";
+    string data = "Data in 1st block";
+    size_t threshold = 2;
+    size_t cur_nonce = 0;
+
+    // print the sizes of each variable
+    printf("Size of block_id = %lu\n", sizeof(block_id));
+    printf("Size of prev_digest = %lu\n", sizeof(prev_digest.c_str()));
+    printf("Strlen of prev_digest = %lu\n", strlen(prev_digest.c_str()));
+    printf("Size of data = %lu\n", sizeof(data.c_str()));
+    printf("Strlen of data = %lu\n", strlen(data.c_str()));
+    printf("Size of threshold = %lu\n", sizeof(threshold));
+    printf("Size of cur_nonce = %lu\n", sizeof(cur_nonce));
+
+    // allocate memory for the string based on the size of the block_id, prev_digest, data, threshold, and nonce.
+    char *str = (char *)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(prev_digest.c_str()) + 1 + strlen(data.c_str()) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
+    // create the string
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", block_id, prev_digest.c_str(), data.c_str(), threshold, cur_nonce);
+
+    // print the string
+    printf("Size of str = %lu\n", sizeof(str));
+    printf("Strlen of str = %lu\n", strlen(str));
+    printf("String = %s\n", str);
+
+    // modify the string
+    str[strlen(str)] = 'A';
+    str[strlen(str)] = 'B';
+    printf("Strlen of str = %lu\n", strlen(str));
+    printf("String = %s\n", str);
+}
+
 int main(int argc, char *argv[]) {
     // TODO test if GPU works with OpenMP
 
@@ -110,4 +151,7 @@ int main(int argc, char *argv[]) {
     // test3();
     // printf("--------------------------------------------\n");
     // test4();
+
+    // printf("--------------------------------------------\n");
+    // test_strings();
 }

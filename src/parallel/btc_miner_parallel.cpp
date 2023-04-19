@@ -114,9 +114,9 @@ int main(int argc, char *argv[]) {
 
         while (running) {
             string data_to_hash = blockchain.getString(private_nonce);
-            string digest = double_sha256(data_to_hash);
+            string digest = double_sha256(data_to_hash.c_str());
 
-            if (blockchain.thresholdMet(digest, global_threshold)) {
+            if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
                 if (DEBUG) {
                     omp_set_lock(&lock_print);
                     cout << "Found valid nonce: " << private_nonce << "\tTID: " << omp_get_thread_num() << endl;
@@ -166,12 +166,12 @@ int main(int argc, char *argv[]) {
             // The other threads should verify the digest with the valid nonce and increment the validation counter
             if (verify) {
                 data_to_hash = blockchain.getString(valid_nonce);
-                digest = double_sha256(data_to_hash);
+                digest = double_sha256(data_to_hash.c_str());
                 // Verify 1 thread at a time
 #pragma omp critical
                 {
                     if (validation_counter < NUM_VALIDATIONS) {
-                        if (blockchain.thresholdMet(digest, global_threshold)) {
+                        if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
                             omp_set_lock(&lock_print);
                             cout << "Digest accepted: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
                             omp_unset_lock(&lock_print);

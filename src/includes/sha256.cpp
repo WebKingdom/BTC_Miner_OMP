@@ -1,5 +1,12 @@
-// #pragma once
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
 #include <openssl/sha.h>
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
+
+#include <string.h>
 
 #include <iomanip>
 #include <iostream>
@@ -13,14 +20,11 @@ using namespace std;
 #define SHA256_DIGEST_LENGTH 32
 
 // Function for taking the SHA-256 hash of a string
-#if RUN_ON_TARGET
-#pragma omp declare target
-#endif
-string sha256(const string str) {
+string sha256(const char* str) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
-    SHA256_Update(&sha256, str.c_str(), str.size());
+    SHA256_Update(&sha256, str, strlen(str));
     SHA256_Final(digest, &sha256);
 
     stringstream ss;
@@ -29,19 +33,13 @@ string sha256(const string str) {
     }
     return ss.str();
 }
-#if RUN_ON_TARGET
-#pragma omp end declare target
-#endif
 
 // Function for taking the double SHA-256 hash of a string
-#if RUN_ON_TARGET
-#pragma omp declare target
-#endif
-string double_sha256(const string str) {
+string double_sha256(const char* str) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
-    SHA256_Update(&sha256, str.c_str(), str.size());
+    SHA256_Update(&sha256, str, strlen(str));
     SHA256_Final(digest, &sha256);
 
     SHA256_Init(&sha256);
@@ -53,6 +51,55 @@ string double_sha256(const string str) {
         ss << hex << setw(2) << setfill('0') << (int)digest[i];
     }
     return ss.str();
+}
+
+// Function for taking the SHA-256 hash of a string on the GPU
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
+char* gpu_sha256(const char* str) {
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, str, strlen(str));
+    SHA256_Final(digest, &sha256);
+
+    // return digest as a char array (string) padded with 0s to 32 bytes
+    char* digest_str = (char*)malloc(SHA256_DIGEST_LENGTH + 1);
+    int i;
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        digest_str[i] = digest[i];
+    }
+    digest_str[i] = '\0';
+    return digest_str;
+}
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
+
+// Function for taking the double SHA-256 hash of a string on the GPU
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
+char* gpu_double_sha256(const char* str) {
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, str, strlen(str));
+    SHA256_Final(digest, &sha256);
+
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, digest, SHA256_DIGEST_LENGTH);
+    SHA256_Final(digest, &sha256);
+
+    // return digest as a char array (string) padded with 0s to 32 bytes
+    char* digest_str = (char*)malloc(SHA256_DIGEST_LENGTH + 1);
+    int i;
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        digest_str[i] = digest[i];
+    }
+    digest_str[i] = '\0';
+    return digest_str;
 }
 #if RUN_ON_TARGET
 #pragma omp end declare target

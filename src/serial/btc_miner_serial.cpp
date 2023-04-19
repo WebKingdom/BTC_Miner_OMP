@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
 
     while (running) {
         const string data_to_hash = blockchain.getString(global_nonce);
-        string digest = double_sha256(data_to_hash);
+        string digest = double_sha256(data_to_hash.c_str());
 
-        if (blockchain.thresholdMet(digest, global_threshold)) {
+        if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
             // Found a valid nonce that provides a digest that meets the threshold requirement.
             valid_nonce = global_nonce;
             validation_counter++;

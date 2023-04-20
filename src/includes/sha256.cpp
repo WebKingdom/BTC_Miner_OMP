@@ -140,13 +140,11 @@ void Transform(const unsigned char* message, WORD blockNum, const WORD* sha256K,
         for (j = 0; j < 16; j++) {
             CHARTOWORD(&tempBlock[j << 2], &expandedWords[j]);
         }
-        // kelime genisletme algoritmasi
         WordExtend(expandedWords);
 
         for (j = 0; j < 8; j++) {
             abcdefgh[j] = sha256H[j];
         }
-        // word compress algoritmasi
         WordCompress(abcdefgh, sha256K, expandedWords);
 
         for (j = 0; j < 8; j++) {
@@ -198,13 +196,46 @@ void Final(unsigned char* digest, const WORD* sha256K, WORD* sha256H, unsigned c
 }
 
 char* gpu_sha256(const char* input, const WORD* sha256K) {
-    // unsigned char* digest = new unsigned char[32]();
     unsigned char* digest = (unsigned char*)malloc(sizeof(unsigned char) * 32);
     unsigned char msgBlock[128];
     WORD msgTotalLen = 0, msgLen = 0;
     WORD sha256H[8]{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
     Update((unsigned char*)input, strlen(input), sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
+    Final(digest, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
+
+    char* buf = (char*)malloc(sizeof(char) * 65);
+    buf[64] = 0;
+    for (int i = 0; i < 32; i++)
+        sprintf(buf + i * 2, "%02x", digest[i]);
+
+    free(digest);
+    return buf;
+}
+
+char* gpu_double_sha256(const char* input, const WORD* sha256K) {
+    unsigned char* digest = (unsigned char*)malloc(sizeof(unsigned char) * 32);
+    unsigned char msgBlock[128];
+    WORD msgTotalLen = 0, msgLen = 0;
+    WORD sha256H[8]{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+
+    Update((unsigned char*)input, strlen(input), sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
+    Final(digest, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
+
+    // clear msgBlock, msgTotalLen, msgLen, sha256H for second hash
+    memset(msgBlock, 0, 128);
+    msgTotalLen = 0;
+    msgLen = 0;
+    sha256H[0] = 0x6a09e667;
+    sha256H[1] = 0xbb67ae85;
+    sha256H[2] = 0x3c6ef372;
+    sha256H[3] = 0xa54ff53a;
+    sha256H[4] = 0x510e527f;
+    sha256H[5] = 0x9b05688c;
+    sha256H[6] = 0x1f83d9ab;
+    sha256H[7] = 0x5be0cd19;
+
+    Update(digest, 32, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
     Final(digest, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
 
     char* buf = (char*)malloc(sizeof(char) * 65);

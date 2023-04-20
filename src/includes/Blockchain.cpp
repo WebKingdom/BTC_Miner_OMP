@@ -27,15 +27,22 @@ class Blockchain {
    public:
     Blockchain();
     ~Blockchain();
-    bool isEmpty() { return (head == NULL); }
     void appendBlock(string prev_digest, string data, size_t threshold, size_t nonce);
     void removeBlock();
-    bool thresholdMet(const char* digest, size_t &threshold);
+    bool thresholdMet(const char *digest, size_t &threshold);
     string getString(size_t &cur_nonce);
-    char* gpu_getString(size_t &cur_nonce);
+    char *gpu_getString(size_t &cur_nonce);
+
+#if RUN_ON_TARGET
+#pragma omp declare target
+#endif
+    bool isEmpty() { return (head == NULL); }
     size_t getCurrentBlockId() { return current->block_id; }
     string getPrevDigest() { return current->prev_digest; }
     size_t getSize() { return num_blocks; }
+#if RUN_ON_TARGET
+#pragma omp end declare target
+#endif
 };
 
 /**
@@ -117,7 +124,7 @@ void Blockchain::removeBlock() {
 #if RUN_ON_TARGET
 #pragma omp declare target
 #endif
-bool Blockchain::thresholdMet(const char* digest, size_t &threshold) {
+bool Blockchain::thresholdMet(const char *digest, size_t &threshold) {
     if (threshold >= strlen(digest)) {
         // Cannot have more leading zeros than the length of the digest.
         return false;
@@ -157,7 +164,7 @@ string Blockchain::getString(size_t &cur_nonce) {
 #if RUN_ON_TARGET
 #pragma omp declare target
 #endif
-char* Blockchain::gpu_getString(size_t &cur_nonce) {
+char *Blockchain::gpu_getString(size_t &cur_nonce) {
     // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
     // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
     const unsigned short size_t_bytes = 40;

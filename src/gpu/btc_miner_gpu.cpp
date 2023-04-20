@@ -24,12 +24,13 @@ void exit_handler(int signal) {
  * @param blockchain
  * @param nonce
  */
+#if RUN_ON_TARGET
 #pragma omp declare target
+#endif
 void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
     printf("\nBLOCK ID: %lu\t\tSize: %lu\n", blockchain.getCurrentBlockId(), blockchain.getSize());
     printf("Hash Initialization: \t%s\tNonce: %lu\tTID: %d\n", blockchain.getPrevDigest().c_str(), nonce, omp_get_thread_num());
 }
-#pragma omp end declare target
 
 /**
  * @brief Prints the newly found block info to the console
@@ -40,7 +41,6 @@ void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
  * @param nonce
  * @param data_to_hash
  */
-#pragma omp declare target
 void print_new_block_info(double &t_start, const double &t_start_global, char* digest, size_t &nonce, const char* data_to_hash) {
     // Record time
     double t_end = omp_get_wtime();
@@ -51,7 +51,9 @@ void print_new_block_info(double &t_start, const double &t_start_global, char* d
     printf("Data: \t\t\t%s\n", data_to_hash);
     printf("Block runtime: \t\t%lf seconds\tTotal runtime: %lf seconds\n", t_elapsed, t_global_elapsed);
 }
+#if RUN_ON_TARGET
 #pragma omp end declare target
+#endif
 
 int main(int argc, char *argv[]) {
     // Create interrupt handling variables. Exit on a keyboard ctrl-c interrupt
@@ -65,7 +67,7 @@ int main(int argc, char *argv[]) {
     const string INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
     const string INIT_DATA = "This is the initial data in the 1st block";
     const size_t max_size_t = 0xFFFFFFFFFFFFFFFF;
-    const WORD* sha256_k = InitializeK();
+    const WORD* sha256K = InitializeK();
 
     // Set the number of threads to use
     const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
@@ -98,7 +100,7 @@ int main(int argc, char *argv[]) {
     const double T_START_GLOBAL = t_start;
 
     // Parallelize on GPU instead of CPU
-#pragma omp target teams map(to: global_nonce, validation_counter, NUM_VALIDATIONS, verify, T_START_GLOBAL, sha256_k) map(tofrom: blockchain, global_threshold, valid_nonce, lock_nonce, lock_print, running, t_start)
+#pragma omp target teams map(to: global_nonce, validation_counter, NUM_VALIDATIONS, verify, T_START_GLOBAL, sha256K[:64]) map(tofrom: blockchain, global_threshold, valid_nonce, lock_nonce, lock_print, running, t_start)
     {
 #pragma omp parallel
         {
@@ -115,8 +117,8 @@ int main(int argc, char *argv[]) {
 #pragma omp barrier
 
             while (running) {
-                string data_to_hash = blockchain.getString(private_nonce);
-                char* digest = gpu_sha256(data_to_hash.c_str(), sha256_k);
+                const char* data_to_hash = blockchain.gpu_getString(private_nonce);
+                char* digest = gpu_sha256(data_to_hash, sha256K);
 
                 if (blockchain.thresholdMet((const char*) digest, global_threshold)) {
                     if (DEBUG) {
@@ -137,7 +139,7 @@ int main(int argc, char *argv[]) {
 
                         // Record time
                         omp_set_lock(&lock_print);
-                        print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash.c_str());
+                        print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash);
                         omp_unset_lock(&lock_print);
                         // Append the block to the blockchain
                         blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
@@ -166,8 +168,8 @@ int main(int argc, char *argv[]) {
 
                 // The other threads should verify the digest with the valid nonce and increment the validation counter
                 if (verify) {
-                    data_to_hash = blockchain.getString(valid_nonce);
-                    digest = gpu_sha256(data_to_hash.c_str(), sha256_k);
+                    data_to_hash = blockchain.gpu_getString(valid_nonce);
+                    digest = gpu_sha256(data_to_hash, sha256K);
                     // Verify 1 thread at a time
 #pragma omp critical
                     {

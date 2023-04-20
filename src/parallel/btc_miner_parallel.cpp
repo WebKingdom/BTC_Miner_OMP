@@ -5,7 +5,7 @@
 // #include <chrono>
 
 #include "../includes/Blockchain.cpp"
-#include "../includes/sha256.cpp"
+#include "../includes/sha256_openssl.cpp"
 
 using namespace std;
 

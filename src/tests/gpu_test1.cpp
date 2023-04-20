@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "../includes/defs.h"
 #include "../includes/sha256.cpp"
 
 using namespace std;
@@ -20,9 +21,11 @@ void test1() {
 
 void test2() {
     size_t global_counter = 0;
+    const size_t max_size_t = 0xFFFFFFFFFFFFFFFF;
+    const WORD* sha256_k = InitializeK();
 
     // print all the teams (204 on RTX 3080) and threads (8/team on RTX 3080) in the GPU device
-#pragma omp target teams map(tofrom: global_counter)
+#pragma omp target teams map(tofrom: global_counter, sha256_k)
     {
         /**
          * The TEAMS construct creates a league of one-thread teams where the thread of each team executes
@@ -37,15 +40,18 @@ void test2() {
          * is never a descendant of another initial thread.
          *
          */
-        printf("Created team = %5d / %5d, threads in team = %5d, max threads in team = %5d\n", omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads());
+
+        size_t team_counter = (max_size_t / omp_get_num_teams()) * omp_get_team_num();
+
+        printf("Created team = %5d / %5d, threads in team = %5d, max threads in team = %5d, team counter = %21lu\n", omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads(), team_counter);
 #pragma omp parallel
         {
-            size_t private_counter = 0;
             // Assign a private counter to each thread in each team
+            size_t thread_counter = team_counter;
 #pragma omp critical
             {
-                private_counter = global_counter;
-                global_counter++;
+                thread_counter = team_counter;
+                team_counter++;
             }
 #pragma omp barrier
 
@@ -63,7 +69,22 @@ void test2() {
              *      Threads can synchronize in a team
              *
              */
-            printf("Thread = %5d, team = %5d / %5d, threads in team = %5d, max threads in team = %5d. Count = %5ld\n", omp_get_thread_num(), omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads(), private_counter);
+
+            // hash the data
+            char* data = (char *)malloc(sizeof(char) * 40);
+            char* sha256_k_str = (char *)malloc(sizeof(WORD) * 65 * 2);
+            // max index should be 4*65*2=520
+            sha256_k_str[519] = 0;
+            int i;
+            for (i = 0; i < 64; i++) {
+                sprintf(sha256_k_str + i * 8, "%08x", sha256_k + i);
+            }
+            sprintf(data, "%lu", thread_counter);
+
+            // TODO hash the data causes memory access fault
+            char* digest = gpu_sha256((const char*) data, sha256_k);
+
+            printf("Thread = %5d, team = %5d / %5d, threads in team = %5d, max threads in team = %5d. Thread counter = %21lu, data = %s, digest = %s\n", omp_get_thread_num(), omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads(), thread_counter, data, digest);
         }
     }
 
@@ -126,8 +147,6 @@ void test_strings() {
 }
 
 int main(int argc, char *argv[]) {
-    // TODO test if GPU works with OpenMP
-
     int default_device = omp_get_default_device();
     int num_devices = omp_get_num_devices();
     printf("Default device: %d of %d devices in total\n", default_device, num_devices);

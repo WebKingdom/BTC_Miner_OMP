@@ -14,7 +14,7 @@ using namespace std;
 bool running = true;
 
 void exit_handler(int signal) {
-    cout << "\nCaught signal: " << signal << ". Exiting..." << endl;
+    printf("\nCaught signal: %d. Exiting...\n", signal);
     running = false;
 }
 
@@ -41,14 +41,14 @@ void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
  * @param data_to_hash
  */
 #pragma omp declare target
-void print_new_block_info(double &t_start, const double &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
+void print_new_block_info(double &t_start, const double &t_start_global, char* digest, size_t &nonce, const char* data_to_hash) {
     // Record time
     double t_end = omp_get_wtime();
     double t_elapsed = t_end - t_start;
     double t_global_elapsed = t_end - t_start_global;
     // Print the block info
-    printf("Digest: \t\t%s\tNonce: %lu\tTID: %d\n", digest.c_str(), nonce, omp_get_thread_num());
-    printf("Data: \t\t\t%s\n", data_to_hash.c_str());
+    printf("Digest: \t\t%s\tNonce: %lu\tTID: %d\n", digest, nonce, omp_get_thread_num());
+    printf("Data: \t\t\t%s\n", data_to_hash);
     printf("Block runtime: \t\t%lf seconds\tTotal runtime: %lf seconds\n", t_elapsed, t_global_elapsed);
 }
 #pragma omp end declare target
@@ -64,6 +64,8 @@ int main(int argc, char *argv[]) {
     // Initialize the blockchain
     const string INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
     const string INIT_DATA = "This is the initial data in the 1st block";
+    const size_t max_size_t = 0xFFFFFFFFFFFFFFFF;
+    const WORD* sha256_k = InitializeK();
 
     // Set the number of threads to use
     const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
@@ -96,7 +98,7 @@ int main(int argc, char *argv[]) {
     const double T_START_GLOBAL = t_start;
 
     // Parallelize on GPU instead of CPU
-#pragma omp target teams map(to: global_nonce, validation_counter, NUM_VALIDATIONS, verify, T_START_GLOBAL) map(tofrom: blockchain, global_threshold, valid_nonce, lock_nonce, lock_print, running, t_start)
+#pragma omp target teams map(to: global_nonce, validation_counter, NUM_VALIDATIONS, verify, T_START_GLOBAL, sha256_k) map(tofrom: blockchain, global_threshold, valid_nonce, lock_nonce, lock_print, running, t_start)
     {
 #pragma omp parallel
         {
@@ -114,7 +116,7 @@ int main(int argc, char *argv[]) {
 
             while (running) {
                 string data_to_hash = blockchain.getString(private_nonce);
-                char* digest = gpu_double_sha256(data_to_hash.c_str());
+                char* digest = gpu_sha256(data_to_hash.c_str(), sha256_k);
 
                 if (blockchain.thresholdMet((const char*) digest, global_threshold)) {
                     if (DEBUG) {
@@ -135,7 +137,7 @@ int main(int argc, char *argv[]) {
 
                         // Record time
                         omp_set_lock(&lock_print);
-                        print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash);
+                        print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash.c_str());
                         omp_unset_lock(&lock_print);
                         // Append the block to the blockchain
                         blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
@@ -165,19 +167,19 @@ int main(int argc, char *argv[]) {
                 // The other threads should verify the digest with the valid nonce and increment the validation counter
                 if (verify) {
                     data_to_hash = blockchain.getString(valid_nonce);
-                    digest = gpu_double_sha256(data_to_hash.c_str());
+                    digest = gpu_sha256(data_to_hash.c_str(), sha256_k);
                     // Verify 1 thread at a time
 #pragma omp critical
                     {
                         if (validation_counter < NUM_VALIDATIONS) {
                             if (blockchain.thresholdMet((const char*) digest, global_threshold)) {
                                 omp_set_lock(&lock_print);
-                                printf("Digest accepted: \t%s\tNonce: %lu\tTID: %d\n", digest.c_str(), valid_nonce, omp_get_thread_num());
+                                printf("Digest accepted: \t%s\tNonce: %lu\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                                 omp_unset_lock(&lock_print);
                                 validation_counter++;
                             } else {
                                 omp_set_lock(&lock_print);
-                                printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTID: %d\n", digest.c_str(), valid_nonce, omp_get_thread_num());
+                                printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                                 omp_unset_lock(&lock_print);
                             }
                         }

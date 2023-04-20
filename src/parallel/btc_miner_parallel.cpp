@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-// #include <chrono>
+#include <iostream>
 
 #include "../includes/Blockchain.cpp"
 #include "../includes/sha256_openssl.cpp"
@@ -25,7 +25,7 @@ void exit_handler(int signal) {
  * @param blockchain
  * @param nonce
  */
-void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
+void print_current_block_info(Blockchain& blockchain, size_t& nonce) {
     cout << "\nBLOCK ID: " << blockchain.getCurrentBlockId() << "\t\tSize: " << blockchain.getSize() << endl;
     cout << "Hash Initialization: \t" << blockchain.getPrevDigest() << "\tNonce: " << to_string(nonce) << "\tTID: " << omp_get_thread_num() << endl;
 }
@@ -39,24 +39,19 @@ void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
  * @param nonce
  * @param data_to_hash
  */
-void print_new_block_info(auto &t_start, auto &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
+void print_new_block_info(double& t_start, const double& t_start_global, char* digest, size_t& nonce, char* data_to_hash) {
     // Record time
-    // auto t_end = chrono::high_resolution_clock::now();
-    // auto t_elapsed = chrono::duration<double>(t_end - t_start);
-    // auto t_global_elapsed = chrono::duration<double>(t_end - t_start_global);
     double t_end = omp_get_wtime();
     double t_elapsed = t_end - t_start;
     double t_global_elapsed = t_end - t_start_global;
     // Print the block info
     cout << "Digest: \t\t" << digest << "\tNonce: " << to_string(nonce) << "\tTID: " << omp_get_thread_num() << endl;
     cout << "Data: \t\t\t" << data_to_hash << endl;
-    // cout << "Block runtime: \t\t" << t_elapsed.count() << " seconds"
-    //      << "\tTotal runtime: " << t_global_elapsed.count() << " seconds" << endl;
     cout << "Block runtime: \t\t" << t_elapsed << " seconds"
          << "\tTotal runtime: " << t_global_elapsed << " seconds" << endl;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     // Create interrupt handling variables. Exit on a keyboard ctrl-c interrupt
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = exit_handler;
@@ -65,12 +60,12 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initialize the blockchain
-    const string INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
-    const string INIT_DATA = "This is the initial data in the 1st block";
+    const char* INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
+    const char* INIT_DATA = "This is the initial data in the 1st block";
 
     // Set the number of threads to use
     const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
-    const size_t NUM_VALIDATIONS = MAX_NUM_THREADS / 2;
+    const size_t NUM_VALIDATIONS = 2;
     // omp_set_num_threads(MAX_NUM_THREADS);
     cout << "Number of threads: " << MAX_NUM_THREADS << endl;
 
@@ -94,8 +89,6 @@ int main(int argc, char *argv[]) {
     omp_init_lock(&lock_print);
 
     // Start the timer
-    // auto t_start = chrono::high_resolution_clock::now();
-    // auto t_start_global = t_start;
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
 
@@ -104,19 +97,19 @@ int main(int argc, char *argv[]) {
         // Assign a private nonce to each thread
 #pragma omp critical
         {
-            if (DEBUG)
-                cout << "Set private nonce: " << global_nonce << "\tTID: " << omp_get_thread_num() << endl;
             private_nonce = global_nonce;
             global_nonce++;
+            if (DEBUG)
+                cout << "Set private nonce: " << private_nonce << "\tTID: " << omp_get_thread_num() << endl;
         }
         // Wait for all threads to assign a private nonce
 #pragma omp barrier
 
         while (running) {
-            string data_to_hash = blockchain.getString(private_nonce);
-            string digest = double_sha256(data_to_hash.c_str());
+            char* data_to_hash = blockchain.getString(private_nonce);
+            char* digest = double_sha256((const char*)data_to_hash);
 
-            if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
+            if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
                 if (DEBUG) {
                     omp_set_lock(&lock_print);
                     cout << "Found valid nonce: " << private_nonce << "\tTID: " << omp_get_thread_num() << endl;
@@ -138,7 +131,7 @@ int main(int argc, char *argv[]) {
                     print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash);
                     omp_unset_lock(&lock_print);
                     // Append the block to the blockchain
-                    blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
+                    blockchain.appendBlock((const char*)digest, (const char*)data_to_hash, global_threshold, valid_nonce);
                     // Reset nonce and validation counter. Increment threshold
                     private_nonce = 0;
                     global_nonce = 1;
@@ -151,7 +144,6 @@ int main(int argc, char *argv[]) {
                     omp_unset_lock(&lock_print);
 
                     // Reset the timer
-                    // t_start = chrono::high_resolution_clock::now();
                     t_start = omp_get_wtime();
                     verify = false;
                 }
@@ -166,12 +158,12 @@ int main(int argc, char *argv[]) {
             // The other threads should verify the digest with the valid nonce and increment the validation counter
             if (verify) {
                 data_to_hash = blockchain.getString(valid_nonce);
-                digest = double_sha256(data_to_hash.c_str());
+                digest = double_sha256((const char*)data_to_hash);
                 // Verify 1 thread at a time
 #pragma omp critical
                 {
                     if (validation_counter < NUM_VALIDATIONS) {
-                        if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
+                        if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
                             omp_set_lock(&lock_print);
                             cout << "Digest accepted: \t" << digest << "\tNonce: " << to_string(valid_nonce) << "\tTID: " << omp_get_thread_num() << endl;
                             omp_unset_lock(&lock_print);
@@ -195,8 +187,14 @@ int main(int argc, char *argv[]) {
                 global_nonce++;
                 omp_unset_lock(&lock_nonce);
             }
+            // free memory
+            free(data_to_hash);
+            free(digest);
         }
     }
+
+    // Print the blockchain
+    blockchain.print();
 
     // Delete the blockchain and free memory
     blockchain.~Blockchain();

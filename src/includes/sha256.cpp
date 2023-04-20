@@ -1,14 +1,10 @@
+#include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <cstring>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <string>
-
+#include "sha256.h"
 #include "defs.h"
-#include "Sha.h"
 
 #if RUN_ON_TARGET
 #pragma omp declare target
@@ -37,7 +33,7 @@
 #endif
 
 WORD* InitializeK() {
-    WORD* k = (WORD *)malloc(sizeof(WORD) * 64);
+    WORD* k = (WORD*)malloc(sizeof(WORD) * 64);
     k[0] = 0x428a2f98;
     k[1] = 0x71374491;
     k[2] = 0xb5c0fbcf;

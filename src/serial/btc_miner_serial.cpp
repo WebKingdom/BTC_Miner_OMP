@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <chrono>
+#include <iostream>
 
 #include "../includes/Blockchain.cpp"
 #include "../includes/sha256_openssl.cpp"
@@ -9,13 +10,13 @@
 using namespace std;
 
 #define SHA256_BITS 256
-#define NUM_VALIDATIONS 3
+#define NUM_VALIDATIONS 2
 
-bool running = true;
+int running = 1;
 
 void exit_handler(int signal) {
     cout << "\nCaught signal: " << signal << ". Exiting..." << endl;
-    running = false;
+    running = 0;
 }
 
 /**
@@ -38,7 +39,7 @@ void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
  * @param nonce
  * @param data_to_hash
  */
-void print_new_block_info(auto &t_start, auto &t_start_global, string &digest, size_t &nonce, const string &data_to_hash) {
+void print_new_block_info(auto &t_start, auto &t_start_global, char* digest, size_t &nonce, char* data_to_hash) {
     // Record time
     auto t_end = chrono::high_resolution_clock::now();
     auto t_elapsed = chrono::duration<double>(t_end - t_start);
@@ -59,8 +60,8 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initialize the blockchain
-    const string init_prev_digest = "0000000000000000000000000000000000000000000000000000000000000000";
-    const string init_data = "This is the initial data in the 1st block";
+    const char *init_prev_digest = "0000000000000000000000000000000000000000000000000000000000000000";
+    const char *init_data = "This is the initial data in the 1st block";
 
     size_t global_threshold = 1;
     size_t global_nonce = 0;
@@ -78,10 +79,10 @@ int main(int argc, char *argv[]) {
     auto t_start_global = t_start;
 
     while (running) {
-        const string data_to_hash = blockchain.getString(global_nonce);
-        string digest = double_sha256(data_to_hash.c_str());
+        char *data_to_hash = blockchain.getString(global_nonce);
+        char *digest = double_sha256((const char *)data_to_hash);
 
-        if (blockchain.thresholdMet(digest.c_str(), global_threshold)) {
+        if (blockchain.thresholdMet((const char *)digest, global_threshold)) {
             // Found a valid nonce that provides a digest that meets the threshold requirement.
             valid_nonce = global_nonce;
             validation_counter++;
@@ -89,7 +90,7 @@ int main(int argc, char *argv[]) {
                 // Record time
                 print_new_block_info(t_start, t_start_global, digest, valid_nonce, data_to_hash);
                 // Append the block to the blockchain
-                blockchain.appendBlock(digest, data_to_hash, global_threshold, valid_nonce);
+                blockchain.appendBlock((const char *)digest, (const char *)data_to_hash, global_threshold, valid_nonce);
                 // Reset nonce and validation counter. Increment threshold
                 global_nonce = 0;
                 validation_counter = 0;
@@ -106,7 +107,13 @@ int main(int argc, char *argv[]) {
             // Invalid nonce. Increment and try again
             global_nonce++;
         }
+        // free memory
+        free(data_to_hash);
+        free(digest);
     }
+
+    // Print the blockchain
+    blockchain.print();
 
     // Delete the blockchain and free memory
     blockchain.~Blockchain();

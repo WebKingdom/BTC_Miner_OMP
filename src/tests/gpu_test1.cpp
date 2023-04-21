@@ -4,11 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <string>
-
+#include "../includes/GPU_Blockchain.cpp"
 #include "../includes/defs.h"
 #include "../includes/sha256.cpp"
-#include "../includes/GPU_Blockchain.cpp"
 
 using namespace std;
 
@@ -166,8 +164,10 @@ void test4() {
     // Initialize things on target
 #pragma omp target map(tofrom: global_counter)
     {
+        // * This will do this in each team instead of 1 globally unfortunately
         const size_t max_size_t = 0xFFFFFFFFFFFFFFFF;
         WORD* sha256K = GPU_InitializeK();
+        printf("GPU initialized, team = %5d, tid = %5d\n", omp_get_team_num(), omp_get_thread_num());
 #pragma omp teams
         {
             /**
@@ -237,24 +237,24 @@ void test_strings() {
     // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
     const unsigned short size_t_bytes = 40;
     size_t block_id = 1;
-    string prev_digest = "0123456789";
-    string data = "Data in 1st block";
+    char* prev_digest = "0123456789";
+    char* data = "Data in 1st block";
     size_t threshold = 2;
     size_t cur_nonce = 0;
 
     // print the sizes of each variable
     printf("Size of block_id = %lu\n", sizeof(block_id));
-    printf("Size of prev_digest = %lu\n", sizeof(prev_digest.c_str()));
-    printf("Strlen of prev_digest = %lu\n", strlen(prev_digest.c_str()));
-    printf("Size of data = %lu\n", sizeof(data.c_str()));
-    printf("Strlen of data = %lu\n", strlen(data.c_str()));
+    printf("Size of prev_digest = %lu\n", sizeof(prev_digest));
+    printf("Strlen of prev_digest = %lu\n", strlen(prev_digest));
+    printf("Size of data = %lu\n", sizeof(data));
+    printf("Strlen of data = %lu\n", strlen(data));
     printf("Size of threshold = %lu\n", sizeof(threshold));
     printf("Size of cur_nonce = %lu\n", sizeof(cur_nonce));
 
     // allocate memory for the string based on the size of the block_id, prev_digest, data, threshold, and nonce.
-    char* str = (char*)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(prev_digest.c_str()) + 1 + strlen(data.c_str()) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
+    char* str = (char*)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(prev_digest) + 1 + strlen(data) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
     // create the string
-    sprintf(str, "[%lu|%s|%s|%lu|%lu]", block_id, prev_digest.c_str(), data.c_str(), threshold, cur_nonce);
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", block_id, prev_digest, data, threshold, cur_nonce);
 
     // print the string
     printf("Size of str = %lu\n", sizeof(str));

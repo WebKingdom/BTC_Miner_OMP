@@ -4,14 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <string>
-
 #include "defs.h"
 
 using namespace std;
 
 class Blockchain {
-   private:
+   public:
     // Block class. Used to store the data for each block in the blockchain.
     class Block {
        public:
@@ -27,13 +25,13 @@ class Blockchain {
     size_t num_blocks;
     size_t block_counter;
 
-   public:
     Blockchain();
     ~Blockchain();
     void removeBlock();
     void print();
     int isEmpty() { return (head == NULL); }
     size_t getCurrentBlockId() { return current->block_id; }
+    Block *getCurrentBlock() { return current; }
     char *getPrevDigest() { return current->prev_digest; }
     size_t getSize() { return num_blocks; }
     void appendBlock(const char *prev_digest, const char *data, size_t threshold, size_t nonce);
@@ -45,11 +43,13 @@ class Blockchain {
 #endif
     int t_isEmpty() { return (head == NULL); }
     size_t t_getCurrentBlockId() { return current->block_id; }
+    Block *t_getCurrentBlock() { return current; }
     char *t_getPrevDigest() { return current->prev_digest; }
     size_t t_getSize() { return num_blocks; }
     void t_appendBlock(const char *prev_digest, const char *data, size_t threshold, size_t nonce);
     int t_thresholdMet(const char *digest, size_t &threshold);
-    char *t_getString(size_t &cur_nonce);
+    char *t_getString(size_t &cur_nonce, Block *current);
+    char *t_makeString(size_t &cur_nonce, size_t block_id, const char *prev_digest, const char *data, size_t threshold);
 #if RUN_ON_TARGET
 #pragma omp end declare target
 #endif
@@ -217,10 +217,7 @@ int Blockchain::t_thresholdMet(const char *digest, size_t &threshold) {
  * @return char*
  */
 char *Blockchain::getString(size_t &cur_nonce) {
-    // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
-    // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
-    const unsigned short size_t_bytes = 40;
-    char *str = (char *)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
+    char *str = (char *)malloc(sizeof(char) * (1 + SIZE_T_STR_BYTES + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + SIZE_T_STR_BYTES + 1 + SIZE_T_STR_BYTES + 2));
     sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest, current->data, current->threshold, cur_nonce);
     return str;
 }
@@ -230,14 +227,20 @@ char *Blockchain::getString(size_t &cur_nonce) {
  *
  * @return char*
  */
-char *Blockchain::t_getString(size_t &cur_nonce) {
-    // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
-    // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
-    const unsigned short size_t_bytes = 40;
-    char *str = (char *)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
-    // char* str = (char *)malloc(sizeof(char) * size_t_bytes);
-    strcpy(str, "[Sample1]\0");
-    // sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest, current->data, current->threshold, cur_nonce);
+char *Blockchain::t_getString(size_t &cur_nonce, Block *current) {
+    char *str = (char *)malloc(sizeof(char) * (1 + SIZE_T_STR_BYTES + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + SIZE_T_STR_BYTES + 1 + SIZE_T_STR_BYTES + 2));
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest, current->data, current->threshold, cur_nonce);
+    return str;
+}
+
+/**
+ * @brief Returns the string representation of the current block.
+ *
+ * @return char*
+ */
+char *Blockchain::t_makeString(size_t &cur_nonce, size_t block_id, const char *prev_digest, const char *data, size_t threshold) {
+    char *str = (char *)malloc(sizeof(char) * (1 + SIZE_T_STR_BYTES + 1 + strlen(prev_digest) + 1 + strlen(data) + 1 + SIZE_T_STR_BYTES + 1 + SIZE_T_STR_BYTES + 2));
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", block_id, prev_digest, data, threshold, cur_nonce);
     return str;
 }
 

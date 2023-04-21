@@ -32,8 +32,10 @@ struct GPU_Blockchain {
     void removeBlock();
     void print();
     char *getString(size_t &cur_nonce);
+    char *getStringCurrent(size_t &cur_nonce, Block *current);
     int isEmpty() { return (head == NULL); }
     size_t getCurrentBlockId() { return current->block_id; }
+    Block *getCurrentBlock() { return current; }
     char *getPrevDigest() { return current->prev_digest; }
     size_t getSize() { return num_blocks; }
     void appendBlock(const char *prev_digest, const char *data, size_t threshold, size_t nonce);
@@ -145,13 +147,24 @@ int GPU_Blockchain::thresholdMet(const char *digest, size_t &threshold) {
 /**
  * @brief Returns the string representation of the current block.
  *
+ * @param cur_nonce
  * @return char*
  */
 char *GPU_Blockchain::getString(size_t &cur_nonce) {
-    // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
-    // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
-    const unsigned short size_t_bytes = 40;
-    char *str = (char *)malloc(sizeof(char) * (1 + size_t_bytes + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + size_t_bytes + 1 + size_t_bytes + 2));
+    char *str = (char *)malloc(sizeof(char) * (1 + SIZE_T_STR_BYTES + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + SIZE_T_STR_BYTES + 1 + SIZE_T_STR_BYTES + 2));
+    sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest, current->data, current->threshold, cur_nonce);
+    return str;
+}
+
+/**
+ * @brief Returns the string representation of the current parameter block.
+ *
+ * @param cur_nonce
+ * @param current
+ * @return char*
+ */
+char *GPU_Blockchain::getStringCurrent(size_t &cur_nonce, Block *current) {
+    char *str = (char *)malloc(sizeof(char) * (1 + SIZE_T_STR_BYTES + 1 + strlen(current->prev_digest) + 1 + strlen(current->data) + 1 + SIZE_T_STR_BYTES + 1 + SIZE_T_STR_BYTES + 2));
     sprintf(str, "[%lu|%s|%s|%lu|%lu]", current->block_id, current->prev_digest, current->data, current->threshold, cur_nonce);
     return str;
 }

@@ -12,7 +12,7 @@ using namespace std;
 #define SHA256_BITS 256
 #define NUM_VALIDATIONS 2
 
-int running = 1;
+unsigned char running = 1;
 
 void exit_handler(int signal) {
     cout << "\nCaught signal: " << signal << ". Exiting..." << endl;
@@ -112,10 +112,8 @@ int main(int argc, char *argv[]) {
         free(digest);
     }
 
-    // Print the blockchain
+    // Print then delete the blockchain
     blockchain.print();
-
-    // Delete the blockchain and free memory
     blockchain.~Blockchain();
 
     return 0;

@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     print_current_block_info(blockchain, valid_nonce);
 
     // Start the timer
-    const double TIME_LIMIT = 120.0;
+    const double TIME_LIMIT = 300.0;
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
 
@@ -120,6 +120,8 @@ int main(int argc, char* argv[]) {
                     thread_nonce = team_nonce;
                     team_nonce++;
                 }
+                // Wait for all threads to assign a private nonce
+#pragma omp barrier
 
                 while (running_gpu) {
                     char* data_to_hash = blockchain.t_makeString(thread_nonce, b_id, b_prev_digest, b_data, b_threshold);
@@ -189,9 +191,8 @@ int main(int argc, char* argv[]) {
         t_start = omp_get_wtime();
     }  // end CPU running while loop
 
-    // Print the blockchain
+    // Print then delete the blockchain
     blockchain.print();
-    // Delete the blockchain
     blockchain.~Blockchain();
     return 0;
 }

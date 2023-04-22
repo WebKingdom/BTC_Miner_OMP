@@ -12,11 +12,11 @@ using namespace std;
 #define DEBUG 0
 #define SHA256_BITS 256
 
-bool running = true;
+unsigned char running = 1;
 
 void exit_handler(int signal) {
     cout << "\nCaught signal: " << signal << ". Exiting..." << endl;
-    running = false;
+    running = 0;
 }
 
 /**
@@ -64,17 +64,16 @@ int main(int argc, char* argv[]) {
     const char* INIT_DATA = "This is the initial data in the 1st block";
 
     // Set the number of threads to use
-    const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
-    const size_t NUM_VALIDATIONS = 2;
-    // omp_set_num_threads(MAX_NUM_THREADS);
-    cout << "Number of threads: " << MAX_NUM_THREADS << endl;
+    const size_t NUM_THREADS_MINER = omp_get_max_threads() - 2;
+    const size_t NUM_VALIDATIONS = 1;
+    // omp_set_num_threads(NUM_THREADS_MINER);
+    cout << "Number of threads: " << NUM_THREADS_MINER << endl;
 
     size_t global_threshold = 1;
     size_t global_nonce = 0;
-    size_t private_nonce = 0;
     size_t valid_nonce = 0;
     size_t validation_counter = 0;
-    bool verify = false;
+    unsigned char verify = 0;
 
     Blockchain blockchain;
     blockchain.appendBlock(INIT_PREV_DIGEST, INIT_DATA, global_threshold, global_nonce);
@@ -92,9 +91,10 @@ int main(int argc, char* argv[]) {
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
 
-#pragma omp parallel num_threads(MAX_NUM_THREADS) private(private_nonce)
+#pragma omp parallel num_threads(NUM_THREADS_MINER)
     {
         // Assign a private nonce to each thread
+        size_t private_nonce = 0;
 #pragma omp critical
         {
             private_nonce = global_nonce;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
                 {
                     valid_nonce = private_nonce;
                     validation_counter = 0;
-                    verify = true;
+                    verify = 1;
                     while (validation_counter < NUM_VALIDATIONS) {
                         // Wait for all threads to verify the digest
                     }
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
 
                     // Reset the timer
                     t_start = omp_get_wtime();
-                    verify = false;
+                    verify = 0;
                 }
             } else {
                 // Invalid nonce. Increment and try again
@@ -193,14 +193,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Print the blockchain
+    // Print then delete the blockchain
     blockchain.print();
-
-    // Delete the blockchain and free memory
     blockchain.~Blockchain();
     omp_destroy_lock(&lock_nonce);
     omp_destroy_lock(&lock_print);
-
     return 0;
 }
 

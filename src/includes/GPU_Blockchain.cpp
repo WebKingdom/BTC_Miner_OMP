@@ -9,9 +9,7 @@
 using namespace std;
 
 
-#if RUN_ON_TARGET
 #pragma omp declare target
-#endif
 // Block used to store the data for each block in the blockchain.
 struct Block {
     size_t block_id;
@@ -55,9 +53,7 @@ GPU_Blockchain* Create_GPU_Blockchain() {
     new_blockchain->block_counter = 0;
     return new_blockchain;
 }
-#if RUN_ON_TARGET
 #pragma omp end declare target
-#endif
 
 /**
  * @brief Destroy the Blockchain object

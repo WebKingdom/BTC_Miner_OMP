@@ -1,10 +1,7 @@
 #include <omp.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 #include "../includes/Blockchain.cpp"
 #include "../includes/sha256.cpp"
@@ -15,11 +12,11 @@ using namespace std;
 #define DEBUG 0
 #define SHA256_BITS 256
 
-int running_cpu = 1;
-int running_gpu = 1;
+unsigned char running_cpu = 1;
+unsigned char running_gpu = 1;
 
 void exit_handler(int signal) {
-    printf("\nCaught signal: %d. Exiting...\n", signal);
+    printf("\nCPU: Caught signal: %d. Exiting...\n", signal);
     running_cpu = 0;
     running_gpu = 0;
 }
@@ -70,17 +67,19 @@ int main(int argc, char* argv[]) {
 
     // Set the number of threads to use
     const size_t MAX_NUM_THREADS = omp_get_max_threads() - 2;
-    const size_t NUM_VALIDATIONS = 2;
+    const size_t NUM_VALIDATIONS = 1;
     const size_t NUM_DEVICES = omp_get_num_devices();
     // omp_set_num_threads(MAX_NUM_THREADS);
     printf("Number of CPU threads: %lu\n", MAX_NUM_THREADS);
     printf("Number of devices: %lu\n", NUM_DEVICES);
 
     size_t global_threshold = 1;
-    size_t global_counter = 0;
     size_t valid_nonce = 0;
     size_t validation_counter = 0;
-    int verify = 0;
+    int gpu_team = 0;
+    int gpu_tid = 0;
+    unsigned char verify = 0;
+    unsigned char block_rejected = 0;
 
     Blockchain blockchain;
     blockchain.appendBlock(INIT_PREV_DIGEST, INIT_DATA, global_threshold, valid_nonce);
@@ -88,16 +87,10 @@ int main(int argc, char* argv[]) {
 
     print_current_block_info(blockchain, valid_nonce);
 
-    // Initialize lock for incrementing the nonce
-    omp_lock_t lock_nonce;
-    omp_lock_t lock_print;
-    omp_init_lock(&lock_nonce);
-    omp_init_lock(&lock_print);
-
     // Start the timer
+    const double TIME_LIMIT = 120.0;
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
-    const double TIME_LIMIT = 120.0;
 
     while (running_cpu && ((omp_get_wtime() - T_START_GLOBAL) < TIME_LIMIT)) {
         Blockchain::Block* block = blockchain.getCurrentBlock();
@@ -105,15 +98,19 @@ int main(int argc, char* argv[]) {
         const char* b_prev_digest = block->prev_digest;
         const char* b_data = block->data;
         size_t b_threshold = block->threshold;
-        int block_rejected = 0;
+        // Reset variables
+        running_gpu = 1;
+        valid_nonce = 0;
+        validation_counter = 0;
+        block_rejected = 0;
 
-        // Start GPU threads. Block* should take 3*8B + 2*8B + 8B = 48B
-#pragma omp target teams map(to: global_threshold, b_id, b_prev_digest[:strlen(b_prev_digest) + 1],          \
-                             b_data[:strlen(b_data) + 1], b_threshold, sha256K[:64], blockchain, lock_nonce, \
-                             lock_print) map(tofrom: global_counter, running_gpu, valid_nonce, verify)
+        // Start GPU threads
+#pragma omp target teams map(to: global_threshold, b_id, b_prev_digest[:strlen(b_prev_digest)+1], b_data[:strlen(b_data)+1], b_threshold, sha256K[:64], blockchain) map(tofrom: running_gpu, valid_nonce, verify, gpu_team, gpu_tid)
         {
             // Assign a unique starting nonce to each team of threads
             size_t team_nonce = (MAX_SIZE_T / omp_get_num_teams()) * omp_get_team_num();
+            omp_lock_t t_lock_nonce;
+            omp_init_lock(&t_lock_nonce);
 #pragma omp parallel
             {
                 // Assign a private nonce to each thread
@@ -122,25 +119,13 @@ int main(int argc, char* argv[]) {
                 {
                     thread_nonce = team_nonce;
                     team_nonce++;
-                    global_counter++;
-                    // if (DEBUG)
-                    //     printf("Set thread nonce: %21lu\tTeam: %5d\tTID: %5d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
                 }
-                // Wait for all threads to assign a thread private nonce
-#pragma omp barrier
 
-                while (running_gpu && !verify) {
+                while (running_gpu) {
                     char* data_to_hash = blockchain.t_makeString(thread_nonce, b_id, b_prev_digest, b_data, b_threshold);
-                    // if (DEBUG)
-                    //     printf("String to hash: %s\tTeam: %5d\tTID: %5d\n", data_to_hash, omp_get_thread_num());
-
                     char* digest = gpu_double_sha256((const char*)data_to_hash, sha256K);
-                    // if (DEBUG)
-                    //     printf("Digest: %s\tTeam: %5d\tTID: %5d\n", digest, omp_get_thread_num());
 
                     if (blockchain.t_thresholdMet((const char*)digest, global_threshold)) {
-                        // if (DEBUG)
-                        //     printf("Found valid nonce: %21lu\tTeam: %5d\tTID: %5d\n", thread_nonce, omp_get_thread_num());
                         // Found a valid nonce that provides a digest that meets the threshold requirement.
                         // CPU will verify the digest and append the block to the blockchain
 #pragma omp single nowait
@@ -148,15 +133,16 @@ int main(int argc, char* argv[]) {
                             valid_nonce = thread_nonce;
                             verify = 1;
                             running_gpu = 0;
-#pragma omp flush(verify, valid_nonce, running_gpu, global_counter)
+                            gpu_team = omp_get_team_num();
+                            gpu_tid = omp_get_thread_num();
+#pragma omp flush(verify, valid_nonce, running_gpu, gpu_team, gpu_tid)
                         }
                     } else {
                         // Invalid nonce. Increment and try again
-                        omp_set_lock(&lock_nonce);
+                        omp_set_lock(&t_lock_nonce);
                         thread_nonce = team_nonce;
                         team_nonce++;
-                        global_counter++;
-                        omp_unset_lock(&lock_nonce);
+                        omp_unset_lock(&t_lock_nonce);
                     }
                     // free memory
                     free(data_to_hash);
@@ -173,10 +159,10 @@ int main(int argc, char* argv[]) {
             digest = double_sha256((const char*)data_to_hash);
             if (validation_counter < NUM_VALIDATIONS) {
                 if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
-                    printf("Digest accepted: \t%s\tNonce: %lu\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                    printf("Digest accepted: \t%s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
                     validation_counter++;
                 } else {
-                    printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                    printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
                     block_rejected = 1;
                     break;
                 }
@@ -197,25 +183,16 @@ int main(int argc, char* argv[]) {
             }
             print_current_block_info(blockchain, valid_nonce);
         }
-        t_start = omp_get_wtime();
-        // Reset variables
-        running_gpu = 1;
-        valid_nonce = 0;
-        validation_counter = 0;
-
-        // free memory
+        // free memory and update timer
         free(data_to_hash);
         free(digest);
+        t_start = omp_get_wtime();
     }  // end CPU running while loop
 
     // Print the blockchain
     blockchain.print();
-
-    // Delete the blockchain and free memory
+    // Delete the blockchain
     blockchain.~Blockchain();
-    omp_destroy_lock(&lock_nonce);
-    omp_destroy_lock(&lock_print);
-
     return 0;
 }
 

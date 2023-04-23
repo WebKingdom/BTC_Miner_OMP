@@ -1,13 +1,6 @@
-// #pragma once
-#include <omp.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "defs.h"
-
-using namespace std;
-
+/**
+ * Blockchain class. Used to store the data for the entire blockchain like a linked list.
+*/
 class Blockchain {
    public:
     // Block class. Used to store the data for each block in the blockchain.

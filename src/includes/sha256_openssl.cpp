@@ -1,11 +1,8 @@
-#include "defs.h"
+#include <openssl/sha.h>
+
+#include "utils.h"
 
 #pragma warning(disable : 4996)
-
-#include <openssl/sha.h>
-#include <string.h>
-
-using namespace std;
 
 // Function for taking the SHA-256 hash of a string
 char* sha256(const char* str) {

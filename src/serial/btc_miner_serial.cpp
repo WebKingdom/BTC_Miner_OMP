@@ -1,54 +1,17 @@
 #include <signal.h>
-#include <stdlib.h>
 
-#include <chrono>
-#include <iostream>
-
-#include "../includes/Blockchain.cpp"
+#include "../includes/utils.h"
 #include "../includes/sha256_openssl.cpp"
 
 using namespace std;
 
-#define SHA256_BITS 256
-#define NUM_VALIDATIONS 2
+#define NUM_VALIDATIONS 1
 
 unsigned char running = 1;
 
 void exit_handler(int signal) {
-    cout << "\nCaught signal: " << signal << ". Exiting..." << endl;
+    printf("\nCPU: Caught signal: %d. Exiting...\n", signal);
     running = 0;
-}
-
-/**
- * @brief Prints the current (to be mined) block info to the console
- *
- * @param blockchain
- * @param nonce
- */
-void print_current_block_info(Blockchain &blockchain, size_t &nonce) {
-    cout << "\nBLOCK ID: " << blockchain.getCurrentBlockId() << "\t\tSize: " << blockchain.getSize() << endl;
-    cout << "Hash Initialization: \t" << blockchain.getPrevDigest() << "\tNonce: " << to_string(nonce) << endl;
-}
-
-/**
- * @brief Prints the newly found block info to the console
- *
- * @param t_start
- * @param t_start_global
- * @param digest
- * @param nonce
- * @param data_to_hash
- */
-void print_new_block_info(auto &t_start, auto &t_start_global, char* digest, size_t &nonce, char* data_to_hash) {
-    // Record time
-    auto t_end = chrono::high_resolution_clock::now();
-    auto t_elapsed = chrono::duration<double>(t_end - t_start);
-    auto t_global_elapsed = chrono::duration<double>(t_end - t_start_global);
-    // Print the block info
-    cout << "Digest: \t\t" << digest << "\tNonce: " << to_string(nonce) << endl;
-    cout << "Data: \t\t\t" << data_to_hash << endl;
-    cout << "Block runtime: \t\t" << t_elapsed.count() << " seconds"
-         << "\tTotal runtime: " << t_global_elapsed.count() << " seconds" << endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -75,8 +38,8 @@ int main(int argc, char *argv[]) {
     print_current_block_info(blockchain, global_nonce);
 
     // Start the timer
-    auto t_start = chrono::high_resolution_clock::now();
-    auto t_start_global = t_start;
+    double t_start = omp_get_wtime();
+    const double T_START_GLOBAL = t_start;
 
     while (running) {
         char *data_to_hash = blockchain.getString(global_nonce);
@@ -88,7 +51,7 @@ int main(int argc, char *argv[]) {
             validation_counter++;
             if (validation_counter >= NUM_VALIDATIONS) {
                 // Record time
-                print_new_block_info(t_start, t_start_global, digest, valid_nonce, data_to_hash);
+                print_new_block_info(t_start, T_START_GLOBAL, digest, valid_nonce, data_to_hash);
                 // Append the block to the blockchain
                 blockchain.appendBlock((const char *)digest, (const char *)data_to_hash, global_threshold, valid_nonce);
                 // Reset nonce and validation counter. Increment threshold
@@ -101,7 +64,7 @@ int main(int argc, char *argv[]) {
                 print_current_block_info(blockchain, global_nonce);
 
                 // Reset the timer
-                t_start = chrono::high_resolution_clock::now();
+                t_start = omp_get_wtime();
             }
         } else {
             // Invalid nonce. Increment and try again
@@ -115,7 +78,6 @@ int main(int argc, char *argv[]) {
     // Print then delete the blockchain
     blockchain.print();
     blockchain.~Blockchain();
-
     return 0;
 }
 

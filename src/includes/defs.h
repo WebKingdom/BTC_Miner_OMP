@@ -1,8 +1,10 @@
-#include <omp.h>
-
 // Definitions for the project
+#ifndef DEFS_H
+#define DEFS_H
+
 #define RUN_ON_TARGET 1
 #define SHA256_DIGEST_LENGTH 32
+#define SHA256_BITS 256
 #define MAX_SIZE_T 0xFFFFFFFFFFFFFFFF
 
 // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
@@ -13,6 +15,7 @@ typedef unsigned int WORD;  // 4 Bytes
 // * Define on target as well:
 #pragma omp declare target
 #define SHA256_DIGEST_LENGTH 32
+#define SHA256_BITS 256
 #define MAX_SIZE_T 0xFFFFFFFFFFFFFFFF
 
 // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
@@ -20,3 +23,5 @@ typedef unsigned int WORD;  // 4 Bytes
 #define SIZE_T_STR_BYTES 40
 typedef unsigned int WORD;  // 4 Bytes
 #pragma omp end declare target
+
+#endif

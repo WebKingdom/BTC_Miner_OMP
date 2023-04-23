@@ -1,11 +1,6 @@
-#include <omp.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "utils.h"
 
 #pragma warning(disable : 4996)
-
-#include "defs.h"
 
 #if RUN_ON_TARGET
 #pragma omp declare target

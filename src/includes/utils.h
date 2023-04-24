@@ -16,7 +16,7 @@
  * @param nonce
  */
 void print_current_block_info(Blockchain& blockchain, size_t& nonce) {
-    printf("\nBLOCK ID: %lu\t\tSize: %lu\n", blockchain.getCurrentBlockId(), blockchain.getSize());
+    printf("\nBLOCK ID: %lu\t\t\t\tSize: %lu\n", blockchain.getCurrentBlockId(), blockchain.getSize());
     printf("Hash Initialization: \t%s\tNonce: %lu\tTID: %d\n", blockchain.getPrevDigest(), nonce, omp_get_thread_num());
 }
 
@@ -35,9 +35,9 @@ void print_new_block_info(double& t_start, const double& t_start_global, char* d
     double t_elapsed = t_end - t_start;
     double t_global_elapsed = t_end - t_start_global;
     // Print the block info
-    printf("Digest: \t\t%s\tNonce: %lu\tTID: %d\n", digest, nonce, omp_get_thread_num());
-    printf("Data: \t\t\t%s\n", data_to_hash);
-    printf("Block runtime: \t\t%lf seconds\tTotal runtime: %lf seconds\n", t_elapsed, t_global_elapsed);
+    printf("Digest: \t\t\t\t%s\tNonce: %lu\tTID: %d\n", digest, nonce, omp_get_thread_num());
+    printf("Data: \t\t\t\t\t%s\n", data_to_hash);
+    printf("Block runtime: \t\t\t%lf seconds\tTotal runtime: %lf seconds\n", t_elapsed, t_global_elapsed);
 }
 
 #endif

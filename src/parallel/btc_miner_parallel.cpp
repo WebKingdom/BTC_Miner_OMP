@@ -23,16 +23,18 @@ int main(int argc, char* argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initialize the blockchain
-    const char* INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
-    const char* INIT_DATA = "This is the initial data in the 1st block";
+    const char* INIT_DATA = "[BLOCK ID|PREVIOUS DIGEST|DATA|THRESHOLD|NONCE]";
+    const char* INIT_PREV_DIGEST = double_sha256(INIT_DATA);
 
     // Set the number of threads to use
     const size_t NUM_THREADS_MINER = omp_get_max_threads() - 2;
     const size_t NUM_VALIDATIONS = 1;
+    const size_t NUM_DEVICES = omp_get_num_devices();
     // omp_set_num_threads(NUM_THREADS_MINER);
     printf("Number of CPU threads: %lu\n", NUM_THREADS_MINER);
+    printf("Number of devices: %lu\n", NUM_DEVICES);
 
-    size_t global_threshold = 1;
+    size_t global_threshold = 0;
     size_t global_nonce = 0;
     size_t valid_nonce = 0;
     size_t validation_counter = 0;
@@ -123,13 +125,13 @@ int main(int argc, char* argv[]) {
                     if (validation_counter < NUM_VALIDATIONS) {
                         if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
                             omp_set_lock(&lock_print);
-                            printf("Digest accepted: \t%s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                            printf("Digest accepted: \t\t%s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                             validation_counter++;
                         } else {
                             block_rejected = 1;
                             omp_set_lock(&lock_print);
-                            printf("ERROR: Digest rejected: \t%s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                            printf("ERROR: Digest rejected: %s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                         }
                     }

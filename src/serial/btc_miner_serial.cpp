@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initialize the blockchain
-    const char *init_prev_digest = "0000000000000000000000000000000000000000000000000000000000000000";
-    const char *init_data = "This is the initial data in the 1st block";
+    const char *INIT_DATA = "[BLOCK ID|PREVIOUS DIGEST|DATA|THRESHOLD|NONCE]";
+    const char *INIT_PREV_DIGEST = double_sha256(INIT_DATA);
 
     size_t global_threshold = 1;
     size_t global_nonce = 0;
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     size_t validation_counter = 0;
 
     Blockchain blockchain;
-    blockchain.appendBlock(init_prev_digest, init_data, global_threshold, global_nonce);
+    blockchain.appendBlock(INIT_PREV_DIGEST, INIT_DATA, global_threshold, global_nonce);
     global_threshold++;
 
     print_current_block_info(blockchain, global_nonce);

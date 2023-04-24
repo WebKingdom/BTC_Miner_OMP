@@ -4,7 +4,7 @@
 #    sbatch thefilename
 # job standard output will go to the file slurm-%j.out (where %j is the job ID)
 
-#SBATCH --time=00:14:00                 # walltime limit (HH:MM:SS)
+#SBATCH --time=00:15:00                 # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1                       # number of nodes
 #SBATCH --ntasks-per-node=36            # 36 processor core(s) per node 
 #SBATCH --mem=32G                       # maximum memory per node
@@ -20,7 +20,8 @@ module load openssl
 module load openmpi_hpc
 module load openmpi
 
-TIMEOUT=600
+# originally 600 seconds = 10 minutes
+TIMEOUT=840   # 14 minutes
 
 echo "Start job"
 make clean

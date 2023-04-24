@@ -40,10 +40,10 @@ void verify_append_block(unsigned char& verify, unsigned char& block_rejected, B
         digest = double_sha256((const char*)data_to_hash);
         if (validation_counter < NUM_VALIDATIONS) {
             if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
-                printf("Digest accepted: \t%s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
+                printf("Digest accepted: \t\t%s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
                 validation_counter++;
             } else {
-                printf("ERROR. Digest rejected: \t%s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
+                printf("ERROR. Digest rejected: %s\tNonce: %lu\tTeam: %d\tTID: %d\n", digest, valid_nonce, gpu_team, gpu_tid);
                 block_rejected = 1;
                 break;
             }
@@ -78,9 +78,9 @@ int main(int argc, char* argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initialize the blockchain
-    const char* INIT_PREV_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000";
-    const char* INIT_DATA = "This is the initial data in the 1st block";
     const WORD* sha256K = InitializeK();
+    const char* INIT_DATA = "[BLOCK ID|PREVIOUS DIGEST|DATA|THRESHOLD|NONCE]";
+    const char* INIT_PREV_DIGEST = double_sha256(INIT_DATA);
 
     // Set the number of threads to use
     const size_t NUM_THREADS_MINER = omp_get_max_threads() - 2;
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     printf("Number of CPU threads: %lu\n", NUM_THREADS_MINER);
     printf("Number of devices: %lu\n", NUM_DEVICES);
 
-    size_t global_threshold = 1;
+    size_t global_threshold = 0;
     size_t valid_nonce = 0;
     size_t validation_counter = 0;
     int gpu_team = 0;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
     print_current_block_info(blockchain, valid_nonce);
 
     // Start the timer
-    const double TIME_LIMIT = 1800.0;
+    const double TIME_LIMIT = 28800.0;  // 8 hours
     double t_start = omp_get_wtime();
     const double T_START_GLOBAL = t_start;
 
@@ -182,6 +182,10 @@ int main(int argc, char* argv[]) {
             t_start = omp_get_wtime();
         }
     }  // end CPU running while loop
+
+    if ((omp_get_wtime() - T_START_GLOBAL) < TIME_LIMIT) {
+        printf("CPU time limit: %lf seconds reached. Exiting.\n", TIME_LIMIT);
+    }
 
     // Print then delete the blockchain
     blockchain.print();

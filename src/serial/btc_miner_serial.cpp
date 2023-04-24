@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     const char *INIT_DATA = "[BLOCK ID|PREVIOUS DIGEST|DATA|THRESHOLD|NONCE]";
     const char *INIT_PREV_DIGEST = double_sha256(INIT_DATA);
 
-    size_t global_threshold = 1;
+    size_t global_threshold = 0;
     size_t global_nonce = 0;
     size_t valid_nonce = 0;
     size_t validation_counter = 0;

@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
         }
     }  // end CPU running while loop
 
-    if ((omp_get_wtime() - T_START_GLOBAL) < TIME_LIMIT) {
+    if ((omp_get_wtime() - T_START_GLOBAL) > TIME_LIMIT) {
         printf("CPU time limit: %lf seconds reached. Exiting.\n", TIME_LIMIT);
     }
 

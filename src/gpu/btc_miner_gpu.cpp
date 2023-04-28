@@ -15,6 +15,7 @@ void exit_handler(int signal) {
     printf("\nCPU: Caught signal: %d. Exiting...\n", signal);
     running_cpu = 0;
     running_gpu = 0;
+#pragma omp flush(running_cpu, running_gpu)
 }
 
 /**

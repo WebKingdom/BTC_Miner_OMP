@@ -12,6 +12,7 @@ unsigned char running = 1;
 void exit_handler(int signal) {
     printf("\nCPU: Caught signal: %d. Exiting...\n", signal);
     running = 0;
+#pragma omp flush(running)
 }
 
 int main(int argc, char* argv[]) {

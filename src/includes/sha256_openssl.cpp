@@ -14,7 +14,7 @@ char* sha256(const char* str) {
 
     char* buf = (char*)malloc(sizeof(char) * SHA256_DIGEST_LENGTH * 2 + 1);
     buf[SHA256_DIGEST_LENGTH * 2] = 0;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    for (unsigned char i = 0; i < SHA256_DIGEST_LENGTH; i++)
         sprintf(buf + i * 2, "%02x", digest[i]);
 
     return buf;
@@ -34,7 +34,7 @@ char* double_sha256(const char* str) {
 
     char* buf = (char*)malloc(sizeof(char) * SHA256_DIGEST_LENGTH * 2 + 1);
     buf[SHA256_DIGEST_LENGTH * 2] = 0;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    for (unsigned char i = 0; i < SHA256_DIGEST_LENGTH; i++)
         sprintf(buf + i * 2, "%02x", digest[i]);
 
     return buf;

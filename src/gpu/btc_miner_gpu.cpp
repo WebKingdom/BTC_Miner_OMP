@@ -16,6 +16,7 @@ void exit_handler(int signal) {
     running_cpu = 0;
     running_gpu = 0;
 #pragma omp flush(running_cpu, running_gpu)
+#pragma omp target update to(running_cpu, running_gpu)
 }
 
 /**

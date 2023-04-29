@@ -126,13 +126,13 @@ int main(int argc, char* argv[]) {
                     if (validation_counter < NUM_VALIDATIONS) {
                         if (blockchain.thresholdMet((const char*)digest, global_threshold)) {
                             omp_set_lock(&lock_print);
-                            printf("Digest accepted: \t\t%s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                            printf("Digest accepted: \t\t%s\tNonce: %ld\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                             validation_counter++;
                         } else {
                             block_rejected = 1;
                             omp_set_lock(&lock_print);
-                            printf("ERROR: Digest rejected: %s\tNonce: %d\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
+                            printf("ERROR: Digest rejected: %s\tNonce: %ld\tTID: %d\n", digest, valid_nonce, omp_get_thread_num());
                             omp_unset_lock(&lock_print);
                         }
                     }

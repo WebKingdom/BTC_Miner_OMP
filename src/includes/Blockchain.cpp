@@ -155,7 +155,7 @@ void Blockchain::removeBlock() {
  * @return false - 0
  */
 int Blockchain::thresholdMet(const char *digest, size_t &threshold) {
-    int valid = 1;
+    unsigned char valid = 1;
     if (threshold >= strlen(digest)) {
         // Cannot have more leading zeros than the length of the digest.
         valid = 0;
@@ -184,7 +184,7 @@ int Blockchain::thresholdMet(const char *digest, size_t &threshold) {
  * @return false - 0
  */
 int Blockchain::t_thresholdMet(const char *digest, size_t &threshold) {
-    int valid = 1;
+    unsigned char valid = 1;
     if (threshold >= strlen(digest)) {
         // Cannot have more leading zeros than the length of the digest.
         valid = 0;

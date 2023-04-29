@@ -101,13 +101,13 @@ WORD* InitializeK() {
 #pragma omp declare target
 #endif
 void WordExtend(WORD* words) {
-    for (size_t i = 16; i < 64; i++)
+    for (unsigned char i = 16; i < 64; i++)
         words[i] = SIGMA1(words[i - 2]) + words[i - 7] + SIGMA0(words[i - 15]) + words[i - 16];
 }
 
 void WordCompress(WORD* abcdefgh, const WORD* sha256K, WORD* expandedWords) {
     WORD temp1, temp2;
-    for (int i = 0; i < 64; i++) {
+    for (unsigned char i = 0; i < 64; i++) {
         temp1 = abcdefgh[7] + SUM1(abcdefgh[4]) + CH(abcdefgh[4], abcdefgh[5], abcdefgh[6]) + sha256K[i] + expandedWords[i];
         temp2 = SUM0(abcdefgh[0]) + MAJ(abcdefgh[0], abcdefgh[1], abcdefgh[2]);
         abcdefgh[7] = abcdefgh[6];
@@ -126,8 +126,9 @@ void Transform(const unsigned char* message, WORD blockNum, const WORD* sha256K,
     WORD abcdefgh[8];
 
     const unsigned char* tempBlock;
-    int i, j;
-    for (i = 0; i < (int)blockNum; i++) {
+    unsigned int i;
+    unsigned char j;
+    for (i = 0; i < (unsigned int)blockNum; i++) {
         tempBlock = message + (i << 6);
         for (j = 0; j < 16; j++) {
             CHARTOWORD(&tempBlock[j << 2], &expandedWords[j]);
@@ -183,7 +184,7 @@ void Final(unsigned char* digest, const WORD* sha256K, WORD* sha256H, unsigned c
     WORDTOCHAR(lenB, msgBlock + tempLen - 4);
     Transform(msgBlock, blockNum, sha256K, sha256H);
 
-    for (int i = 0; i < 8; i++)
+    for (unsigned char i = 0; i < 8; i++)
         WORDTOCHAR(sha256H[i], &digest[i << 2]);
 }
 
@@ -198,7 +199,7 @@ char* gpu_sha256(const char* input, const WORD* sha256K) {
 
     char* buf = (char*)malloc(sizeof(char) * 65);
     buf[64] = 0;
-    for (int i = 0; i < 32; i++)
+    for (unsigned char i = 0; i < 32; i++)
         sprintf(buf + i * 2, "%02x", digest[i]);
 
     free(digest);
@@ -232,7 +233,7 @@ char* gpu_double_sha256(const char* input, const WORD* sha256K) {
 
     char* buf = (char*)malloc(sizeof(char) * 65);
     buf[64] = 0;
-    for (int i = 0; i < 32; i++)
+    for (unsigned char i = 0; i < 32; i++)
         sprintf(buf + i * 2, "%02x", digest[i]);
 
     free(digest);

@@ -116,7 +116,7 @@ void GPU_Blockchain::removeBlock() {
  * @return false - 0
  */
 int GPU_Blockchain::thresholdMet(const char *digest, size_t &threshold) {
-    int valid = 1;
+    unsigned char valid = 1;
     if (threshold >= strlen(digest)) {
         // Cannot have more leading zeros than the length of the digest.
         valid = 0;

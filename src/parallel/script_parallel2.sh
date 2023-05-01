@@ -6,8 +6,8 @@
 
 #SBATCH --time=00:15:00                 # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1                       # number of nodes
-#SBATCH --ntasks-per-node=64            # 64 processor core(s) per node 
-#SBATCH --mem=32G                       # maximum memory per node
+#SBATCH --ntasks-per-node=10            # 64 processor core(s) per node 
+#SBATCH --mem=16G                       # maximum memory per node
 #SBATCH --partition=class-short         # class node(s)
 #SBATCH --job-name="ssz_parallel2"
 #SBATCH --output="hpc_parallel2-%j.out" # job standard output file (%j replaced by job id)
@@ -24,7 +24,7 @@ module load openmpi
 TIMEOUT=840   # 14 minutes
 
 echo "Start job"
-make clean
+# make clean
 make
 
 # run executable in background and get the PID of the process
@@ -33,5 +33,5 @@ MINER_PID=$!
 sleep $TIMEOUT
 kill -2 $MINER_PID
 
-make clean
+# make clean
 echo "End job after $TIMEOUT seconds"

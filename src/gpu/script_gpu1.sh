@@ -7,7 +7,7 @@
 #SBATCH --time=00:15:00               # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1                     # number of nodes
 #SBATCH --ntasks-per-node=6           # 6 processor core(s) per node 
-#SBATCH --mem=32G                     # maximum memory per node
+#SBATCH --mem=16G                     # maximum memory per node
 #SBATCH --gres=gpu:a100:1
 #SBATCH --partition=class-gpu-short   # class node(s)
 #SBATCH --job-name="ssz_gpu1"

@@ -7,7 +7,7 @@
 #SBATCH --time=00:15:00                 # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1                       # number of nodes
 #SBATCH --ntasks-per-node=36            # 36 processor core(s) per node 
-#SBATCH --mem=32G                       # maximum memory per node
+#SBATCH --mem=16G                       # maximum memory per node
 #SBATCH --partition=class-short         # class node(s)
 #SBATCH --job-name="ssz_serial1"
 #SBATCH --output="hpc_serial1-%j.out"   # job standard output file (%j replaced by job id)

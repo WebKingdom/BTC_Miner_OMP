@@ -199,8 +199,18 @@ char* gpu_sha256(const char* input, const WORD* sha256K) {
 
     char* buf = (char*)malloc(sizeof(char) * 65);
     buf[64] = 0;
-    for (unsigned char i = 0; i < 32; i++)
-        sprintf(buf + i * 2, "%02x", digest[i]);
+
+    // put each value of digest into buf as a 2 digit hex value (8 bits each)
+    for (unsigned char i = 0; i < 32; i++) {
+        unsigned char top = (digest[i] & 0xf0) >> 4;
+        unsigned char bottom = digest[i] & 0x0f;
+        buf[i * 2] = top < 10 ? top + '0' : top - 10 + 'a';
+        buf[i * 2 + 1] = bottom < 10 ? bottom + '0' : bottom - 10 + 'a';
+    }
+
+    // * using sprintf
+    // for (unsigned char i = 0; i < 32; i++)
+    //     sprintf(buf + i * 2, "%02x", digest[i]);
 
     free(digest);
     return buf;
@@ -233,8 +243,18 @@ char* gpu_double_sha256(const char* input, const WORD* sha256K) {
 
     char* buf = (char*)malloc(sizeof(char) * 65);
     buf[64] = 0;
-    for (unsigned char i = 0; i < 32; i++)
-        sprintf(buf + i * 2, "%02x", digest[i]);
+
+    // put each value of digest into buf as a 2 digit hex value (8 bits each)
+    for (unsigned char i = 0; i < 32; i++) {
+        unsigned char top = (digest[i] & 0xf0) >> 4;
+        unsigned char bottom = digest[i] & 0x0f;
+        buf[i * 2] = top < 10 ? top + '0' : top - 10 + 'a';
+        buf[i * 2 + 1] = bottom < 10 ? bottom + '0' : bottom - 10 + 'a';
+    }
+
+    // * using sprintf
+    // for (unsigned char i = 0; i < 32; i++)
+    //     sprintf(buf + i * 2, "%02x", digest[i]);
 
     free(digest);
     return buf;

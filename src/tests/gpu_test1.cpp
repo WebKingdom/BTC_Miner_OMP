@@ -158,80 +158,6 @@ void test3() {
     }
 }
 
-void test4() {
-    size_t global_counter = 0;
-
-    // Initialize things on target
-#pragma omp target map(tofrom: global_counter)
-    {
-        // * This will do this in each team instead of 1 globally unfortunately
-        const size_t max_size_t = 0xFFFFFFFFFFFFFFFF;
-        WORD* sha256K = GPU_InitializeK();
-        printf("GPU initialized, team = %5d, tid = %5d\n", omp_get_team_num(), omp_get_thread_num());
-#pragma omp teams
-        {
-            /**
-             * The TEAMS construct creates a league of one-thread teams where the thread of each team executes
-             * concurrently and is in its own contention group. The number of teams created is implementation defined,
-             * but is no more than num_teams if specified in the clause. The maximum number of threads participating in
-             * the contention group that each team initiates is implementation defined as well, unless thread_limit is
-             * specified in the clause. Threads in a team can synchronize but no synchronization among teams. The TEAMS
-             * construct must be contained in a TARGET construct, without any other directives, statements or declarations
-             * in between.
-             *
-             * A contention group is the set of all threads that are descendants of an initial thread. An initial thread
-             * is never a descendant of another initial thread.
-             *
-             */
-
-            size_t team_counter = (max_size_t / omp_get_num_teams()) * omp_get_team_num();
-            printf("Created team = %5d / %5d, threads in team = %5d, max threads in team = %5d, team counter = %21lu\n", omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads(), team_counter);
-#pragma omp parallel
-            {
-                // Assign a private counter to each thread in each team
-                size_t thread_counter = team_counter;
-#pragma omp critical
-                {
-                    thread_counter = team_counter;
-                    team_counter++;
-                    global_counter++;
-                }
-#pragma omp barrier
-
-                /**
-                 * To further create threads within each team and distribute loop iterations across threads, we will use
-                 * the PARALLEL FOR/DO constructs.
-                 *
-                 * TEAMS DISTRIBUTE construct
-                 *      Coarse-grained parallelism
-                 *      Spawns multiple single-thread teams
-                 *      No synchronization of threads in different teams
-                 * PARALLEL FOR/DO construct
-                 *      Fine-grained parallelism
-                 *      Spawns many threads in one team
-                 *      Threads can synchronize in a team
-                 *
-                 */
-
-                // hash the data
-                char* data = (char*)malloc(sizeof(char) * 40);
-                char* sha256K_str = (char*)malloc(sizeof(WORD) * 65 * 2);
-                // max index should be 4*65*2=520
-                sha256K_str[519] = 0;
-                for (int i = 0; i < 64; i++) {
-                    sprintf(sha256K_str + (i * 8), "%08x", sha256K[i]);
-                }
-                sprintf(data, "%lu", thread_counter);
-
-                char* digest = gpu_double_sha256((const char*)data, sha256K);
-                printf("Thread = %5d, team = %5d / %5d, threads in team = %5d, max threads in team = %5d. Thread counter = %21lu, data = %s, digest = %s\n", omp_get_thread_num(), omp_get_team_num(), omp_get_num_teams(), omp_get_num_threads(), omp_get_max_threads(), thread_counter, data, digest);
-            }
-        }
-    }
-
-    printf("Global counter = %ld\n", global_counter);
-}
-
 void test_strings() {
     // Assume size_t is 8 bytes (2^64 = 18,446,744,073,709,551,616). So, 6*3+2=20 bytes to fit size_t in string.
     // To be safe, use 2^128=~3.4x10^38 as max number that fits in size_t. So, use 40 bytes to fit size_t in string.
@@ -290,8 +216,6 @@ int main(int argc, char* argv[]) {
     // test2();
     // printf("--------------------------------------------\n");
     // test3();
-    // printf("--------------------------------------------\n");
-    test4();
 
     // printf("--------------------------------------------\n");
     // test_strings();

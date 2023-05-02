@@ -135,13 +135,10 @@ int main(int argc, char* argv[]) {
 #pragma omp parallel
             {
                 // Assign a private nonce to each thread
-                size_t thread_nonce = team_nonce;
-#pragma omp critical
-                {
-                    thread_nonce = team_nonce;
-                    team_nonce++;
-                    // printf("Init nonce: %lu\tTeam: %d\tTID: %d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
-                }
+                size_t thread_nonce;
+#pragma omp atomic capture
+                thread_nonce = team_nonce++;
+                // printf("Init nonce: %lu\tTeam: %d\tTID: %d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
                 // Wait for all threads to assign a private nonce
 #pragma omp barrier
 
@@ -166,10 +163,9 @@ int main(int argc, char* argv[]) {
                         }
                     } else {
                         // Invalid nonce. Increment and try again
-                        omp_set_lock(&lock_nonce);
-                        thread_nonce = team_nonce;
-                        team_nonce++;
-                        omp_unset_lock(&lock_nonce);
+#pragma omp atomic capture
+                        thread_nonce = team_nonce++;
+                        // printf("Incr nonce: %lu\tTeam: %d\tTID: %d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
                     }
                     // free memory
                     free(data_to_hash);

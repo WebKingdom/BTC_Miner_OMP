@@ -6,11 +6,11 @@
 
 #SBATCH --time=00:15:00                 # walltime limit (HH:MM:SS)
 #SBATCH --nodes=1                       # number of nodes
-#SBATCH --ntasks-per-node=6            # 36 processor core(s) per node 
+#SBATCH --ntasks-per-node=4            # 36 processor core(s) per node 
 #SBATCH --mem=16G                       # maximum memory per node
 #SBATCH --partition=class-short         # class node(s)
-#SBATCH --job-name="ssz_parallel1"
-#SBATCH --output="hpc_parallel1-%j.out" # job standard output file (%j replaced by job id)
+#SBATCH --job-name="ssz_parallel2"
+#SBATCH --output="hpc_parallel2-%j.out" # job standard output file (%j replaced by job id)
 
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE
 

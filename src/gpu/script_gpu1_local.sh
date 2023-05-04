@@ -7,7 +7,7 @@ make clean
 make
 
 # run executable in background and get the PID of the process
-./btc_miner_gpu.exe > local_gpu1_10m2.out 2>&1 &
+./btc_miner_gpu.exe > local_gpu1_10m6.out 2>&1 &
 MINER_PID=$!
 sleep $TIMEOUT
 kill -2 $MINER_PID

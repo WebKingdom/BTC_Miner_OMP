@@ -121,6 +121,8 @@ int main(int argc, char* argv[]) {
         const char* b_prev_digest = block->prev_digest;
         const char* b_data = block->data;
         const size_t b_threshold = block->threshold;
+        const size_t prev_digest_len = strlen(b_prev_digest) + 1;
+        const size_t b_data_len = strlen(b_data) + 1;
         // Reset variables
         running_gpu = 1;
         valid_nonce = 0;
@@ -128,14 +130,14 @@ int main(int argc, char* argv[]) {
         block_rejected = 0;
 
         // Start GPU threads
-#pragma omp target teams map(to: global_threshold, b_id, b_prev_digest[:strlen(b_prev_digest)+1], b_data[:strlen(b_data)+1], b_threshold, sha256K[:64], blockchain, lock_nonce) map(tofrom: running_gpu, valid_nonce, verify, gpu_team, gpu_tid)
+#pragma omp target teams map(to: global_threshold, b_id, b_prev_digest[0:prev_digest_len], b_data[0:b_data_len], b_threshold, sha256K[0:64], blockchain) map(tofrom: running_gpu, valid_nonce, verify, gpu_team, gpu_tid)
         {
             // Assign a unique starting nonce to each team of threads
             size_t team_nonce = (MAX_SIZE_T / omp_get_num_teams()) * omp_get_team_num();
 #pragma omp parallel
             {
                 // Assign a private nonce to each thread
-                size_t thread_nonce;
+                size_t thread_nonce = team_nonce;
 #pragma omp atomic capture
                 thread_nonce = team_nonce++;
                 // printf("Init nonce: %lu\tTeam: %d\tTID: %d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
@@ -149,23 +151,27 @@ int main(int argc, char* argv[]) {
                     char* digest = gpu_double_sha256((const char*)data_to_hash, sha256K);
                     // printf("Digest: %s\tTeam: %d\tTID: %d\n", digest, omp_get_team_num(), omp_get_thread_num());
 
-                    if (blockchain.t_thresholdMet((const char*)digest, global_threshold)) {
+                    if (running_gpu && blockchain.t_thresholdMet((const char*)digest, global_threshold)) {
                         // Found a valid nonce that provides a digest that meets the threshold requirement.
                         // CPU will verify the digest and append the block to the blockchain
-#pragma omp single nowait
-                        {
-                            valid_nonce = thread_nonce;
-                            verify = 1;
-                            running_gpu = 0;
-                            gpu_team = omp_get_team_num();
-                            gpu_tid = omp_get_thread_num();
+                        running_gpu = 0;
+#pragma omp flush(running_gpu)
+                        gpu_team = omp_get_team_num();
+                        gpu_tid = omp_get_thread_num();
+                        valid_nonce = thread_nonce;
+                        verify = 1;
 #pragma omp flush(verify, valid_nonce, running_gpu, gpu_team, gpu_tid)
-                        }
-                    } else {
+                        break;
+                    } else if (running_gpu) {
                         // Invalid nonce. Increment and try again
 #pragma omp atomic capture
                         thread_nonce = team_nonce++;
                         // printf("Incr nonce: %lu\tTeam: %d\tTID: %d\n", thread_nonce, omp_get_team_num(), omp_get_thread_num());
+                    } else {
+                        // free memory
+                        free(data_to_hash);
+                        free(digest);
+                        break;
                     }
                     // free memory
                     free(data_to_hash);

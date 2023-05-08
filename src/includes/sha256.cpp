@@ -189,7 +189,7 @@ void Final(unsigned char* digest, const WORD* sha256K, WORD* sha256H, unsigned c
 }
 
 char* gpu_sha256(const char* input, const WORD* sha256K) {
-    unsigned char* digest = (unsigned char*)malloc(sizeof(unsigned char) * 32);
+    unsigned char* digest = (unsigned char*)calloc(32, sizeof(unsigned char));
     unsigned char msgBlock[128];
     WORD msgTotalLen = 0, msgLen = 0;
     WORD sha256H[8]{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
@@ -197,8 +197,8 @@ char* gpu_sha256(const char* input, const WORD* sha256K) {
     Update((unsigned char*)input, strlen(input), sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
     Final(digest, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
 
-    char* buf = (char*)malloc(sizeof(char) * 65);
-    buf[64] = 0;
+    char* buf = (char*)calloc(65, sizeof(char));
+    buf[64] = '\0';
 
     // put each value of digest into buf as a 2 digit hex value (8 bits each)
     for (unsigned char i = 0; i < 32; i++) {
@@ -217,7 +217,7 @@ char* gpu_sha256(const char* input, const WORD* sha256K) {
 }
 
 char* gpu_double_sha256(const char* input, const WORD* sha256K) {
-    unsigned char* digest = (unsigned char*)malloc(sizeof(unsigned char) * 32);
+    unsigned char* digest = (unsigned char*)calloc(32, sizeof(unsigned char));
     unsigned char msgBlock[128];
     WORD msgTotalLen = 0, msgLen = 0;
     WORD sha256H[8]{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
@@ -241,8 +241,8 @@ char* gpu_double_sha256(const char* input, const WORD* sha256K) {
     Update(digest, 32, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
     Final(digest, sha256K, sha256H, msgBlock, msgTotalLen, msgLen);
 
-    char* buf = (char*)malloc(sizeof(char) * 65);
-    buf[64] = 0;
+    char* buf = (char*)calloc(65, sizeof(char));
+    buf[64] = '\0';
 
     // put each value of digest into buf as a 2 digit hex value (8 bits each)
     for (unsigned char i = 0; i < 32; i++) {
